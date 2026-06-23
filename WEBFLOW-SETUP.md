@@ -116,9 +116,10 @@ Then add an **HTML Embed** element where the calculator should appear:
      data-api="/tools/sales-tax-calculator/api/quote"></div>
 ```
 
-Use the embed editor's **"+ Add Field"** to insert the real City / State / ZIP tokens
-(the `[[...]]` above are placeholders for those bindings). Leave `line1` out — the proxy
-fills a default; the ZIP drives the rate.
+Use the embed editor's **"+ Add Field"** to insert the real tokens (the `[[...]]` above are
+placeholders): bind `data-city` → **City**, `data-state` → **State code** (the 2-letter
+plain-text field — *not* the State reference), `data-zip` → **ZIP**. Leave `line1` out —
+the proxy fills a default; the ZIP drives the rate.
 
 Add the script **once** (Page settings → Before `</body>`, or site-wide footer):
 
@@ -127,7 +128,7 @@ Add the script **once** (Page settings → Before `</body>`, or site-wide footer
 ```
 
 **URL structure:** set the collection's URL prefix to something like
-`sales-tax-calculator`, so pages live at `/sales-tax-calculator/los-angeles-ca`. Keep it
+`sales-tax-calculator`, so pages live at `/sales-tax-calculator/los-angeles-california`. Keep it
 distinct from the app's `/tools/sales-tax-calculator` mount path.
 
 ---
