@@ -7,8 +7,8 @@
  *   <div data-zamp-calc
  *        data-city="Los Angeles" data-state="CA" data-zip="90012"
  *        data-line1="200 N Spring St"
- *        data-api="/sales-tax/api/quote"></div>
- *   <script src="/sales-tax/widget.js" defer></script>
+ *        data-api="/tools/sales-tax-calculator/api/quote"></div>
+ *   <script src="/tools/sales-tax-calculator/widget.js" defer></script>
  *
  * Submit-driven: the visitor enters a price + category and presses Calculate; each click
  * is one real Zamp calculation for the exact amount (proxied so the API key stays server
@@ -107,7 +107,7 @@
       state: (node.getAttribute('data-state') || '').toUpperCase(),
       zip: node.getAttribute('data-zip') || '',
       line1: node.getAttribute('data-line1') || '',
-      api: node.getAttribute('data-api') || '/sales-tax/api/quote'
+      api: node.getAttribute('data-api') || '/tools/sales-tax-calculator/api/quote'
     };
     var locText = (cfg.city ? cfg.city + ', ' + cfg.state : cfg.state) + (cfg.zip ? ' · ' + cfg.zip : '');
     var options = CATEGORIES.map(function (c) { return '<option value="' + c.id + '">' + esc(c.label) + '</option>'; }).join('');

@@ -2,8 +2,8 @@
 
 Programmatic-SEO sales tax calculator for the Zamp website. A small [Webflow Cloud](https://developers.webflow.com/webflow-cloud) app (Astro + Cloudflare Workers) hosts:
 
-- **`/sales-tax/api/quote`** — a secure proxy that holds the Zamp API key server-side and returns the effective tax **rate** for a location + category.
-- **`/sales-tax/widget.js`** — a self-contained calculator embedded on every Webflow CMS location page.
+- **`/tools/sales-tax-calculator/api/quote`** — a secure proxy that holds the Zamp API key server-side and returns the effective tax **rate** for a location + category.
+- **`/tools/sales-tax-calculator/widget.js`** — a self-contained calculator embedded on every Webflow CMS location page.
 
 The Zamp API key **never** reaches the browser. Visitors' browsers only call our own same-origin endpoint.
 
@@ -11,7 +11,7 @@ The Zamp API key **never** reaches the browser. Visitors' browsers only call our
 
 ```
 Webflow CMS location page  ──>  widget.js (reads data-* from the page)
-                                     │  POST /sales-tax/api/quote {taxCode, zip, state, city, line1, amount}
+                                     │  POST /tools/sales-tax-calculator/api/quote {taxCode, zip, state, city, line1, amount}
                                      ▼
                            Webflow Cloud API route  ──(Bearer ZAMP_API_KEY)──>  api.zamp.com/calculations
                                      │  memoizes the real result by exact input (KV + in-memory)
@@ -55,13 +55,13 @@ npm install
 echo 'ZAMP_API_KEY=<your-zamp-key>' > .dev.vars
 
 npm run dev
-# open http://localhost:4321/sales-tax/
+# open http://localhost:4321/tools/sales-tax-calculator/
 ```
 
 Test the proxy directly:
 
 ```bash
-curl -s -X POST http://localhost:4321/sales-tax/api/quote \
+curl -s -X POST http://localhost:4321/tools/sales-tax-calculator/api/quote \
   -H 'Content-Type: application/json' \
   -d '{"taxCode":"general","zip":"90012","state":"CA","city":"Los Angeles","line1":"200 N Spring St"}'
 ```
@@ -70,7 +70,7 @@ curl -s -X POST http://localhost:4321/sales-tax/api/quote \
 
 1. Push to GitHub (this repo: `arihgoldstein/zamp-sales-tax-calulator-webflow`).
 2. Webflow dashboard → **New Project → App** → import this repo.
-3. Set the **Mount path** to `/sales-tax` (must match `MOUNT_PATH` in `astro.config.mjs`).
+3. Set the **Mount path** to `/tools/sales-tax-calculator` (must match `MOUNT_PATH` in `astro.config.mjs`).
 4. Add an environment variable **`ZAMP_API_KEY`** and toggle it **Secret**.
 5. (Optional) Add **`RATE_CACHE_VERSION`** (e.g. `1`); bump it any time to flush cached
    rates instantly after a known rate change.
@@ -99,9 +99,9 @@ into the data attributes, plus the script once (e.g. in the page/site footer):
   data-state="{{State Code}}"
   data-zip="{{Representative ZIP}}"
   data-line1="{{Representative Line1}}"
-  data-api="/sales-tax/api/quote">
+  data-api="/tools/sales-tax-calculator/api/quote">
 </div>
-<script src="/sales-tax/widget.js" defer></script>
+<script src="/tools/sales-tax-calculator/widget.js" defer></script>
 ```
 
 The same embed works across all location pages — each page supplies its own data.

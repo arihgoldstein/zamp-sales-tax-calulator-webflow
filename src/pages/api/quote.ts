@@ -16,7 +16,7 @@ function json(obj: unknown, status = 200, maxAge = 300) {
 }
 
 /**
- * POST /sales-tax/api/quote
+ * POST /tools/sales-tax-calculator/api/quote
  * body: { taxCode, zip, state, city?, line1?, amount? }
  * → { taxable, amount, tax, effectiveRate, jurisdictions[], label, note }
  *

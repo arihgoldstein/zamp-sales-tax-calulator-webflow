@@ -5,10 +5,10 @@ import cloudflare from '@astrojs/cloudflare';
 // The mount path is where Webflow Cloud serves this app on your site.
 // It MUST match the "Mount path" you set in the Webflow Cloud dashboard.
 // Everything the app exposes lives under it:
-//   page:   https://<your-domain>/sales-tax/
-//   api:    https://<your-domain>/sales-tax/api/quote
-//   widget: https://<your-domain>/sales-tax/widget.js
-const MOUNT_PATH = '/sales-tax';
+//   page:   https://<your-domain>/tools/sales-tax-calculator/
+//   api:    https://<your-domain>/tools/sales-tax-calculator/api/quote
+//   widget: https://<your-domain>/tools/sales-tax-calculator/widget.js
+const MOUNT_PATH = '/tools/sales-tax-calculator';
 
 export default defineConfig({
   base: MOUNT_PATH,

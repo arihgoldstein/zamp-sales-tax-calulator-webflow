@@ -19,16 +19,21 @@ import → build the template → publish.
 
 1. Webflow dashboard → **New Project → App** → **Import a GitHub repository** →
    `arihgoldstein/zamp-sales-tax-calulator-webflow`.
-2. **Mount path:** `/sales-tax`  (must match `MOUNT_PATH` in `astro.config.mjs`).
+2. **Mount path:** `/tools/sales-tax-calculator`  (must match `MOUNT_PATH` in `astro.config.mjs`).
 3. **Environment variables:**
    - `ZAMP_API_KEY` → your production key → toggle **Secret**.
    - `RATE_CACHE_VERSION` → `1` (bump anytime to flush cached rates).
 4. **Deploy.** The KV bindings (`SESSION`, `RATES`) auto-provision from `wrangler.json`.
-5. Verify: `https://<your-domain>/sales-tax/widget.js` loads, and a POST to
-   `https://<your-domain>/sales-tax/api/quote` returns JSON.
+5. Verify: `https://<your-domain>/tools/sales-tax-calculator/widget.js` loads, and a POST to
+   `https://<your-domain>/tools/sales-tax-calculator/api/quote` returns JSON.
 
-> Keep the app's mount path (`/sales-tax`) **different** from the location pages' URL
-> prefix (below) so they don't collide.
+> **Three distinct paths — keep them separate:**
+> - `/sales-tax` — existing marketing content. **Untouched.**
+> - `/sales-tax-calculator/[city]` — the location pages (CMS, step 4).
+> - `/tools/sales-tax-calculator` — **this app** (API + widget only; not a content URL).
+>
+> If Webflow Cloud's mount-path field rejects the nested path, fall back to a single
+> segment (e.g. `/tax-calculator-app`) and update `MOUNT_PATH` in `astro.config.mjs` to match.
 
 ---
 
@@ -86,7 +91,7 @@ Then add an **HTML Embed** element where the calculator should appear:
      data-city="[[City]]"
      data-state="[[State]]"
      data-zip="[[ZIP]]"
-     data-api="/sales-tax/api/quote"></div>
+     data-api="/tools/sales-tax-calculator/api/quote"></div>
 ```
 
 Use the embed editor's **"+ Add Field"** to insert the real City / State / ZIP tokens
@@ -96,12 +101,12 @@ fills a default; the ZIP drives the rate.
 Add the script **once** (Page settings → Before `</body>`, or site-wide footer):
 
 ```html
-<script src="/sales-tax/widget.js" defer></script>
+<script src="/tools/sales-tax-calculator/widget.js" defer></script>
 ```
 
 **URL structure:** set the collection's URL prefix to something like
 `sales-tax-calculator`, so pages live at `/sales-tax-calculator/los-angeles-ca`. Keep it
-distinct from the app's `/sales-tax` mount path.
+distinct from the app's `/tools/sales-tax-calculator` mount path.
 
 ---
 

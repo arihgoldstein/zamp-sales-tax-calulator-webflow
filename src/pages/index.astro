@@ -10,7 +10,7 @@ import { resolveTaxCode } from '../lib/taxCodes';
 
 const LOC = { city: 'Los Angeles', state: 'CA', zip: '90012', line1: '200 N Spring St' };
 // Normalize the mount path to no trailing slash; Astro's BASE_URL form varies by version.
-const base = import.meta.env.BASE_URL.replace(/\/+$/, ''); // -> "/sales-tax"
+const base = import.meta.env.BASE_URL.replace(/\/+$/, ''); // -> "/tools/sales-tax-calculator"
 const env = (Astro.locals as any).runtime?.env ?? {};
 
 let headlineRate: number | null = null;
