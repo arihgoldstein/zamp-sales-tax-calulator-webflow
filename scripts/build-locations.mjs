@@ -116,6 +116,22 @@ const kebab = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/
 // Tax rates need up to 3 decimals (e.g. NY = 8.875%), trimmed of trailing zeros.
 const pct = (n) => (n * 100).toFixed(3).replace(/\.?0+$/, '') + '%';
 
+// 2-letter code -> full state name, for the unique Name ("Boston, Massachusetts") and
+// the keyword-rich slug ("boston-massachusetts"). Cities share names across states, so
+// Name and Slug both include the full state to stay unique.
+const STATE_NAMES = {
+  AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado',
+  CT: 'Connecticut', DE: 'Delaware', DC: 'District of Columbia', FL: 'Florida', GA: 'Georgia',
+  HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky',
+  LA: 'Louisiana', ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota',
+  MS: 'Mississippi', MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire',
+  NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota',
+  OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina',
+  SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia',
+  WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming',
+};
+const stateFull = (abbr) => STATE_NAMES[abbr] || abbr;
+
 // States with NO local sales tax — a state-only result is CORRECT here, not a gap.
 const NO_LOCAL_STATES = new Set(['CT', 'IN', 'KY', 'ME', 'MD', 'MA', 'MI', 'NJ', 'RI', 'DC']);
 
@@ -129,17 +145,19 @@ function needsReview(state, rate, taxable, levels) {
 }
 
 function seoFields(c, rate, taxable) {
-  const slug = `${kebab(c.city)}-${c.state.toLowerCase()}`;
+  const full = stateFull(c.state);
+  const name = `${c.city}, ${full}`;            // unique CMS title, e.g. "Boston, Massachusetts"
+  const slug = `${kebab(c.city)}-${kebab(full)}`; // keyword-rich, unique URL, e.g. "boston-massachusetts"
   const rateStr = pct(rate);
   const hasTax = taxable && rate > 0;
-  const title = `${c.city}, ${c.state} Sales Tax Calculator`;
+  const title = `${c.city}, ${full} Sales Tax Calculator`;
   const metaDescription = hasTax
-    ? `The combined sales tax rate in ${c.city}, ${c.state} is ${rateStr}. Enter a price to calculate the exact sales tax and total by product category.`
-    : `${c.city}, ${c.state} has no general sales tax. Use the calculator to check tax by product category and see your total.`;
+    ? `The combined sales tax rate in ${c.city}, ${full} is ${rateStr}. Enter a price to calculate the exact sales tax and total by product category.`
+    : `${c.city}, ${full} has no general sales tax. Use the calculator to check tax by product category and see your total.`;
   const intro = hasTax
-    ? `The combined sales tax rate in ${c.city}, ${c.state} is ${rateStr}, made up of state, county, and local district rates. Enter a purchase amount below to see the exact tax for what you're buying.`
-    : `${c.city}, ${c.state} doesn't charge a general sales tax. Use the calculator below to confirm how specific product categories are treated.`;
-  return { slug, combined_rate: rate.toFixed(5), combined_rate_pct: rateStr, taxable: String(hasTax), seo_title: title, meta_description: metaDescription, intro_text: intro };
+    ? `The combined sales tax rate in ${c.city}, ${full} is ${rateStr}, made up of state, county, and local district rates. Enter a purchase amount below to see the exact tax for what you're buying.`
+    : `${c.city}, ${full} doesn't charge a general sales tax. Use the calculator below to confirm how specific product categories are treated.`;
+  return { name, state_name: full, slug, combined_rate: rate.toFixed(5), combined_rate_pct: rateStr, taxable: String(hasTax), seo_title: title, meta_description: metaDescription, intro_text: intro };
 }
 
 // ---- concurrency pool ----
@@ -157,7 +175,7 @@ async function pool(items, size, worker) {
 }
 
 // ---- main ----
-const COLUMNS = ['city', 'state', 'zip', 'county', 'population', 'slug', 'combined_rate', 'combined_rate_pct', 'taxable', 'jurisdiction_levels', 'needs_review', 'address_valid', 'seo_title', 'meta_description', 'intro_text'];
+const COLUMNS = ['name', 'city', 'state', 'state_name', 'zip', 'county', 'population', 'slug', 'combined_rate', 'combined_rate_pct', 'taxable', 'jurisdiction_levels', 'needs_review', 'address_valid', 'seo_title', 'meta_description', 'intro_text'];
 
 let cities = parseCsv(readFileSync(inPath, 'utf8'));
 if (LIMIT > 0) cities = cities.slice(0, LIMIT);
@@ -168,7 +186,7 @@ const rows = await pool(cities, CONCURRENCY, async (c) => {
   const [addr, rate] = await Promise.all([validateAddress(c), headlineRate(c).catch(() => null)]);
   done++;
   if (done % 5 === 0 || done === cities.length) console.error(`  ${done}/${cities.length}`);
-  if (!rate) return { ...c, slug: kebab(c.city) + '-' + c.state.toLowerCase(), combined_rate: '', combined_rate_pct: 'ERROR', taxable: '', jurisdiction_levels: '', needs_review: 'true', address_valid: addr.ok, seo_title: '', meta_description: '', intro_text: '' };
+  if (!rate) return { ...c, name: `${c.city}, ${stateFull(c.state)}`, state_name: stateFull(c.state), slug: `${kebab(c.city)}-${kebab(stateFull(c.state))}`, combined_rate: '', combined_rate_pct: 'ERROR', taxable: '', jurisdiction_levels: '', needs_review: 'true', address_valid: addr.ok, seo_title: '', meta_description: '', intro_text: '' };
   const seo = seoFields(c, rate.rate, rate.taxable);
   return { ...c, ...seo, zip: addr.zip, jurisdiction_levels: rate.levels.join('|'), needs_review: needsReview(c.state, rate.rate, rate.taxable, rate.levels), address_valid: addr.ok === null ? 'skipped' : String(addr.ok) };
 });

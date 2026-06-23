@@ -1,0 +1,52 @@
+name,slug,abbreviation,no_state_sales_tax,has_local_sales_tax
+Alabama,alabama,AL,false,true
+Alaska,alaska,AK,true,true
+Arizona,arizona,AZ,false,true
+Arkansas,arkansas,AR,false,true
+California,california,CA,false,true
+Colorado,colorado,CO,false,true
+Connecticut,connecticut,CT,false,false
+Delaware,delaware,DE,true,false
+District of Columbia,district-of-columbia,DC,false,false
+Florida,florida,FL,false,true
+Georgia,georgia,GA,false,true
+Hawaii,hawaii,HI,false,true
+Idaho,idaho,ID,false,true
+Illinois,illinois,IL,false,true
+Indiana,indiana,IN,false,false
+Iowa,iowa,IA,false,true
+Kansas,kansas,KS,false,true
+Kentucky,kentucky,KY,false,false
+Louisiana,louisiana,LA,false,true
+Maine,maine,ME,false,false
+Maryland,maryland,MD,false,false
+Massachusetts,massachusetts,MA,false,false
+Michigan,michigan,MI,false,false
+Minnesota,minnesota,MN,false,true
+Mississippi,mississippi,MS,false,true
+Missouri,missouri,MO,false,true
+Montana,montana,MT,true,true
+Nebraska,nebraska,NE,false,true
+Nevada,nevada,NV,false,true
+New Hampshire,new-hampshire,NH,true,false
+New Jersey,new-jersey,NJ,false,false
+New Mexico,new-mexico,NM,false,true
+New York,new-york,NY,false,true
+North Carolina,north-carolina,NC,false,true
+North Dakota,north-dakota,ND,false,true
+Ohio,ohio,OH,false,true
+Oklahoma,oklahoma,OK,false,true
+Oregon,oregon,OR,true,false
+Pennsylvania,pennsylvania,PA,false,true
+Rhode Island,rhode-island,RI,false,false
+South Carolina,south-carolina,SC,false,true
+South Dakota,south-dakota,SD,false,true
+Tennessee,tennessee,TN,false,true
+Texas,texas,TX,false,true
+Utah,utah,UT,false,true
+Vermont,vermont,VT,false,true
+Virginia,virginia,VA,false,true
+Washington,washington,WA,false,true
+West Virginia,west-virginia,WV,false,true
+Wisconsin,wisconsin,WI,false,true
+Wyoming,wyoming,WY,false,true

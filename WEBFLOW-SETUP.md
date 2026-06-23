@@ -37,16 +37,34 @@ import → build the template → publish.
 
 ---
 
-## 2. Create the "Locations" CMS collection
+## 2. Create the "States" collection (do this first)
+
+Locations references States, so create + import this one first.
+CMS → **Create Collection** → "States". Fields (Name + Slug are built in):
+
+| Webflow field | Type | From CSV column |
+|---|---|---|
+| Name | Plain text | `name` (e.g. `California`) |
+| Slug | Slug | `slug` (e.g. `california`) |
+| Abbreviation | Plain text | `abbreviation` (e.g. `CA`) |
+| No state sales tax | Switch | `no_state_sales_tax` |
+| Has local sales tax | Switch | `has_local_sales_tax` |
+
+Import `data/states.csv` (51 rows = 50 states + DC). Add more state-level fields later
+(state rate, nexus thresholds, a state intro, etc.) — that's the point of the collection.
+
+## 3. Create the "Locations" CMS collection
 
 CMS → **Create Collection** → "Locations". Add these fields (the two built-ins **Name**
 and **Slug** are created automatically):
 
 | Webflow field | Type | From CSV column | Notes |
 |---|---|---|---|
-| Name | Plain text | `city` | item label in the CMS |
-| Slug | Slug | `slug` | the page URL (e.g. `los-angeles-ca`) |
-| State | Plain text | `state` | 2-letter |
+| Name | Plain text | `name` | unique title, e.g. `Boston, Massachusetts` |
+| Slug | Slug | `slug` | the page URL, e.g. `boston-massachusetts` |
+| City | Plain text | `city` | the city alone (e.g. `Boston`) — **the widget binds `data-city` to this** |
+| State code | Plain text | `state` | 2-letter, e.g. `CA` — **the widget binds `data-state` to this** |
+| State | Reference → **States** | `state_name` | links to the States collection (Webflow matches by the State's Name, e.g. `California`) |
 | ZIP | Plain text | `zip` | **text, not number** (preserves leading zeros) |
 | County | Plain text | `county` | |
 | Population | Number | `population` | for sorting / "largest cities" |
@@ -62,17 +80,21 @@ plain text.)
 
 ---
 
-## 3. Import the CSV
+## 4. Import the CSVs
 
-1. Collection → **Import** → upload `data/locations.csv`.
-2. Map columns to the fields above (Name → `city`, Slug → `slug`, etc.).
+1. **States first:** States collection → **Import** → `data/states.csv` → map Name → `name`,
+   Slug → `slug`, Abbreviation → `abbreviation`, etc. Publish so the items exist.
+2. **Then Locations:** Locations collection → **Import** → `data/locations.csv` (or
+   `data/locations.test.csv` for a 3-row trial). Map Name → `name`, Slug → `slug`,
+   City → `city`, State code → `state`, ZIP → `zip`, and the **State reference → `state_name`**
+   (Webflow links each row to the matching States item by name).
 3. **Before publishing, exclude `needs_review = true` rows** (≈14 in the pilot) until you've
    confirmed their rates on the production key — or re-run the pipeline with the production
    key first, which should clear them.
 
 ---
 
-## 4. Build the Collection Page template
+## 5. Build the Collection Page template
 
 Open the Locations **Collection Page** template and lay it out (this one design applies to
 every city). Bind CMS fields into the page:
@@ -110,7 +132,7 @@ distinct from the app's `/tools/sales-tax-calculator` mount path.
 
 ---
 
-## 5. Publish & index
+## 6. Publish & index
 
 1. Publish the site.
 2. Confirm a page renders the headline rate in **View Source** (static HTML) and the
