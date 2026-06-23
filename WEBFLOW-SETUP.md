@@ -73,6 +73,7 @@ and **Slug** are created automatically):
 | SEO title | Plain text | `seo_title` | → page title |
 | Meta description | Plain text | `meta_description` | → page meta description |
 | Intro | Plain text | `intro_text` | page intro paragraph |
+| SEO content | Rich text | `seo_content` | evergreen ~350-word SEO body for the bottom of the page (HTML) |
 | Needs review | Switch | `needs_review` | filter these OUT until verified |
 
 (`combined_rate` and `jurisdiction_levels` are optional internal columns — skip or add as

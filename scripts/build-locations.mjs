@@ -108,7 +108,8 @@ async function headlineRate(c) {
   const rate = dest.reduce((s, t) => s + (t.taxRate || 0), 0);
   const taxable = dest.reduce((s, t) => s + (t.taxableAmount || 0), 0) > 0;
   const levels = [...new Set(dest.filter((t) => (t.taxRate || 0) > 0).map((t) => t.jurisdictionDivision))];
-  return { rate, taxable, levels };
+  const stateRate = dest.filter((t) => t.jurisdictionDivision === 'STATE').reduce((s, t) => s + (t.taxRate || 0), 0);
+  return { rate, taxable, levels, stateRate };
 }
 
 // ---- SEO field generation ----
@@ -144,7 +145,46 @@ function needsReview(state, rate, taxable, levels) {
   );
 }
 
-function seoFields(c, rate, taxable) {
+// Evergreen, per-page SEO body (rich text / HTML). Built from each city's real data —
+// rate, state-vs-local split, county, taxable vs. no-tax — so pages differ substantively
+// rather than reading as the same paragraph with the name swapped.
+function seoContent(c, full, combined, stateRate) {
+  const money = (n) => '$' + (Math.round(n * 100) / 100).toFixed(2);
+  const combinedPct = pct(combined);
+  const taxOn100 = combined * 100;
+  const city = c.city;
+  const countyType = c.state === 'LA' ? 'Parish' : c.state === 'AK' ? 'Borough' : 'County';
+  const cnty = c.county ? `${c.county} ${countyType}` : 'the county';
+
+  if (!(combined > 0)) {
+    return [
+      `<h2>Does ${city}, ${full} have sales tax?</h2>`,
+      `<p>${full} is one of a small group of states with no statewide sales tax, so purchases in ${city} generally aren't taxed at the register. A ${money(100)} item costs ${money(100)} — nothing is added at checkout, and no local sales tax applies in ${city} either, which is why the calculator above returns a rate of ${combinedPct}.</p>`,
+      `<h3>What this means for shoppers</h3>`,
+      `<p>The price on the shelf is usually the price you pay. You won't see a separate sales tax line on most receipts here, which is one reason ${full} draws shoppers making larger purchases. Other taxes can still apply in specific cases — excise taxes on goods like fuel or tobacco, or lodging taxes on hotel stays — but those are separate from general sales tax.</p>`,
+      `<h3>Selling from ${city}</h3>`,
+      `<p>Because ${full} has no general sales tax, most sellers based in ${city} don't collect one on local sales. If you ship to customers in other states, you may still have sales tax obligations there based on where those customers are. Zamp helps sellers work out exactly where they need to register and collect, and handles the filing in each state.</p>`,
+    ].join('');
+  }
+
+  const breakdown = stateRate > 0
+    ? `That combines ${full}'s statewide rate of ${pct(stateRate)} with ${pct(combined - stateRate)} in local tax collected by ${cnty} and any city or special districts covering the address.`
+    : `${full} has no statewide sales tax, so the full ${combinedPct} comes from local taxes in and around ${city}, including ${cnty}.`;
+
+  return [
+    `<h2>How much is sales tax in ${city}, ${full}?</h2>`,
+    `<p>The sales tax rate in ${city} is <strong>${combinedPct}</strong>. ${breakdown} Local rates aren't the same across a metro area, so the total can change from one ZIP code to the next — the ${city} sales tax calculator above uses the local rate so your estimate matches what you'd actually pay at checkout.</p>`,
+    `<h3>Working out the tax on a purchase</h3>`,
+    `<p>To do it by hand, multiply the price by ${combinedPct}. A ${money(100)} purchase in ${city} adds about ${money(taxOn100)}, for a total of ${money(100 + taxOn100)}. The calculator handles this for any amount and breaks the result down by jurisdiction, so you can see how much goes to the state, to ${cnty}, and to local districts. Enter a price and choose a category to get an exact figure for your purchase.</p>`,
+    `<h3>What's taxable, and what isn't</h3>`,
+    `<p>Not everything is taxed the same way. Most tangible goods are fully taxable, but groceries and prescription medicine are often exempt or taxed at a reduced rate, and some services fall outside sales tax altogether. Prepared food, clothing, and general merchandise are usually taxed in full. Switch the category in the calculator to see how ${full} treats a specific purchase before you buy it or set up tax on what you sell.</p>`,
+    `<h3>Common questions</h3>`,
+    `<p><strong>Why is the rate different in nearby cities?</strong> Counties, cities, and special districts each set their own local sales tax, and they don't all charge the same amount. A neighboring town can sit in a different district and land a fraction of a percent higher or lower, even when the state rate is identical.</p>`,
+    `<p><strong>How often does the ${city} rate change?</strong> State rates rarely move, but local rates can change when voters approve new district taxes, usually at the start of a calendar quarter. If you sell here, it's worth confirming the current figure before each filing — Zamp tracks those changes across every U.S. jurisdiction and files automatically.</p>`,
+  ].join('');
+}
+
+function seoFields(c, rate, taxable, stateRate) {
   const full = stateFull(c.state);
   const name = `${c.city}, ${full}`;            // unique CMS title, e.g. "Boston, Massachusetts"
   const slug = `${kebab(c.city)}-${kebab(full)}`; // keyword-rich, unique URL, e.g. "boston-massachusetts"
@@ -157,7 +197,8 @@ function seoFields(c, rate, taxable) {
   const intro = hasTax
     ? `The combined sales tax rate in ${c.city}, ${full} is ${rateStr}, made up of state, county, and local district rates. Enter a purchase amount below to see the exact tax for what you're buying.`
     : `${c.city}, ${full} doesn't charge a general sales tax. Use the calculator below to confirm how specific product categories are treated.`;
-  return { name, state_name: full, state_slug: kebab(full), slug, combined_rate: rate.toFixed(5), combined_rate_pct: rateStr, taxable: String(hasTax), seo_title: title, meta_description: metaDescription, intro_text: intro };
+  const seo_content = seoContent(c, full, rate, stateRate || 0);
+  return { name, state_name: full, state_slug: kebab(full), slug, combined_rate: rate.toFixed(5), combined_rate_pct: rateStr, taxable: String(hasTax), seo_title: title, meta_description: metaDescription, intro_text: intro, seo_content };
 }
 
 // ---- concurrency pool ----
@@ -175,7 +216,7 @@ async function pool(items, size, worker) {
 }
 
 // ---- main ----
-const COLUMNS = ['name', 'city', 'state', 'state_name', 'state_slug', 'zip', 'county', 'population', 'slug', 'combined_rate', 'combined_rate_pct', 'taxable', 'jurisdiction_levels', 'needs_review', 'address_valid', 'seo_title', 'meta_description', 'intro_text'];
+const COLUMNS = ['name', 'city', 'state', 'state_name', 'state_slug', 'zip', 'county', 'population', 'slug', 'combined_rate', 'combined_rate_pct', 'taxable', 'jurisdiction_levels', 'needs_review', 'address_valid', 'seo_title', 'meta_description', 'intro_text', 'seo_content'];
 
 let cities = parseCsv(readFileSync(inPath, 'utf8'));
 if (LIMIT > 0) cities = cities.slice(0, LIMIT);
@@ -186,8 +227,8 @@ const rows = await pool(cities, CONCURRENCY, async (c) => {
   const [addr, rate] = await Promise.all([validateAddress(c), headlineRate(c).catch(() => null)]);
   done++;
   if (done % 5 === 0 || done === cities.length) console.error(`  ${done}/${cities.length}`);
-  if (!rate) return { ...c, name: `${c.city}, ${stateFull(c.state)}`, state_name: stateFull(c.state), state_slug: kebab(stateFull(c.state)), slug: `${kebab(c.city)}-${kebab(stateFull(c.state))}`, combined_rate: '', combined_rate_pct: 'ERROR', taxable: '', jurisdiction_levels: '', needs_review: 'true', address_valid: addr.ok, seo_title: '', meta_description: '', intro_text: '' };
-  const seo = seoFields(c, rate.rate, rate.taxable);
+  if (!rate) return { ...c, name: `${c.city}, ${stateFull(c.state)}`, state_name: stateFull(c.state), state_slug: kebab(stateFull(c.state)), slug: `${kebab(c.city)}-${kebab(stateFull(c.state))}`, combined_rate: '', combined_rate_pct: 'ERROR', taxable: '', jurisdiction_levels: '', needs_review: 'true', address_valid: addr.ok, seo_title: '', meta_description: '', intro_text: '', seo_content: '' };
+  const seo = seoFields(c, rate.rate, rate.taxable, rate.stateRate);
   return { ...c, ...seo, zip: addr.zip, jurisdiction_levels: rate.levels.join('|'), needs_review: needsReview(c.state, rate.rate, rate.taxable, rate.levels), address_valid: addr.ok === null ? 'skipped' : String(addr.ok) };
 });
 
