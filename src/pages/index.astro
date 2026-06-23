@@ -5,7 +5,7 @@
 //
 // It also demonstrates the SEO move: the headline rate is rendered server-side into the
 // HTML (in prod this value comes precomputed from the CMS, not a live call per request).
-import { fetchRate } from '../lib/zamp';
+import { fetchCalc } from '../lib/zamp';
 import { resolveTaxCode } from '../lib/taxCodes';
 
 const LOC = { city: 'Los Angeles', state: 'CA', zip: '90012', line1: '200 N Spring St' };
@@ -18,8 +18,15 @@ let headlineErr: string | null = null;
 if (env.ZAMP_API_KEY) {
   try {
     const general = resolveTaxCode('general')!;
-    const r = await fetchRate({ apiKey: env.ZAMP_API_KEY, ...LOC, zampCode: general.zampCode });
-    headlineRate = r.rate;
+    // Headline = the full-precision combined rate for general goods (a linear category).
+    const r = await fetchCalc({
+      apiKey: env.ZAMP_API_KEY,
+      ...LOC,
+      zampCode: general.zampCode,
+      amount: 100,
+      now: new Date().toISOString(),
+    });
+    headlineRate = r.sumRate;
   } catch (e: any) {
     headlineErr = String(e?.message ?? e);
   }
