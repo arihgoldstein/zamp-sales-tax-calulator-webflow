@@ -33,7 +33,7 @@
   var CSS = [
     '.zsc{--green:#183e3d;--green2:#1b595a;--beige:#f6f5f3;--lbeige:#fafaf9;--dbeige:#e6e1da;--vdbeige:#c8bfb1;',
     '--mint:#afecdb;--orange:#ff8232;--yellow:#ffec72;--ink:#141414;--neutral:#838383;--white:#fff;',
-    '--j1:#afecdb;--j2:#74cdba;--j3:#e2f6ef;--ease:cubic-bezier(.215,.61,.355,1);',
+    '--peach:#ffc6a4;--ease:cubic-bezier(.215,.61,.355,1);',
     "--head:Seasonmix,'Helvetica Neue',Helvetica,Arial,sans-serif;--body:Seasonsans,'Helvetica Neue',Helvetica,Arial,sans-serif;",
     'all:initial;display:block;font-family:var(--body);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased;text-align:left}',
     '.zsc *,.zsc *::before,.zsc *::after{box-sizing:border-box}',
@@ -70,7 +70,7 @@
     '.zsc-chip.exempt{background:var(--yellow);color:#5a4a00}',
     '.zsc-prompt{color:#bcd4cf;font-size:15px;line-height:1.5;margin:14px 0 0}',
     '.zsc-stack{margin-top:28px}',
-    '.zsc-bar{display:flex;height:14px;background:rgba(255,255,255,.12);overflow:hidden}',
+    '.zsc-bar{display:flex;gap:2px;height:18px;background:rgba(255,255,255,.1);overflow:hidden}',
     '.zsc-seg{height:100%;transition:width .55s var(--ease)}',
     '.zsc-legend{margin-top:20px;border-top:1px solid rgba(255,255,255,.16)}',
     '.zsc-lrow{display:grid;grid-template-columns:13px 1fr auto;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.1);font-size:14.5px}',
@@ -79,7 +79,7 @@
     '.zsc-lv{font-variant-numeric:tabular-nums;color:var(--white)}',
     '.zsc-lrow.tot{border-bottom:none;padding-bottom:0}',
     '.zsc-lrow.tot .zsc-ln{color:var(--white)}',
-    '.zsc-lrow.tot .zsc-lv{color:var(--yellow);font-size:16px}',
+    '.zsc-lrow.tot .zsc-lv{color:var(--white);font-weight:600;font-size:16px}',
     '.zsc-note{margin-top:auto;padding-top:20px;color:#9fbdb7;font-size:12.5px;line-height:1.5}',
     '.zsc-note.reason{color:#eaf6f2;font-size:15px;line-height:1.55;border-top:1px solid rgba(255,255,255,.16);margin-top:24px;padding-top:20px}',
     '.zsc-err{color:var(--yellow);font-size:14px;line-height:1.5;margin:14px 0 0}',
@@ -100,6 +100,10 @@
   function pct(n) { return (n * 100).toFixed(2).replace(/\.?0+$/, '') + '%'; }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+
+  // Distinct brand color per jurisdiction level (consistent across every page).
+  var LEVEL_COLOR = { 'State': 'var(--mint)', 'County': 'var(--yellow)', 'City': 'var(--orange)', 'Special district': 'var(--peach)' };
+  function levelColor(name) { return LEVEL_COLOR[name] || 'var(--lbeige)'; }
 
   function mount(node) {
     var cfg = {
@@ -170,17 +174,16 @@
           '<span class="zsc-chip tax">Taxable · ' + pct(d.effectiveRate) + '</span>';
 
         var js = d.jurisdictions || [];
-        var palette = ['var(--j1)', 'var(--j2)', 'var(--j3)', 'var(--mint)'];
         var sumRates = js.reduce(function (s, j) { return s + j.rate; }, 0) || 1;
         if (js.length) {
           html += '<div class="zsc-stack"><div class="zsc-bar" id="zsc-bar">';
-          js.forEach(function (j, i) {
+          js.forEach(function (j) {
             var w = (j.rate / sumRates * 100);
-            html += '<div class="zsc-seg" data-w="' + w + '%" style="background:' + palette[i % palette.length] + ';width:' + (animate ? 0 : w) + '%"></div>';
+            html += '<div class="zsc-seg" data-w="' + w + '%" style="background:' + levelColor(j.name) + ';width:' + (animate ? 0 : w) + '%"></div>';
           });
           html += '</div><div class="zsc-legend">';
-          js.forEach(function (j, i) {
-            html += '<div class="zsc-lrow"><span class="zsc-lk" style="background:' + palette[i % palette.length] + '"></span><span class="zsc-ln">' + esc(j.name) + '</span><span class="zsc-lv">' + pct(j.rate) + '</span></div>';
+          js.forEach(function (j) {
+            html += '<div class="zsc-lrow"><span class="zsc-lk" style="background:' + levelColor(j.name) + '"></span><span class="zsc-ln">' + esc(j.name) + '</span><span class="zsc-lv">' + pct(j.rate) + '</span></div>';
           });
           html += '<div class="zsc-lrow tot"><span></span><span class="zsc-ln">Effective rate</span><span class="zsc-lv">' + pct(d.effectiveRate) + '</span></div></div></div>';
         }
