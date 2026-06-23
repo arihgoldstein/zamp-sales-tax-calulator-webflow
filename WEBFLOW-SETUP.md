@@ -68,7 +68,7 @@ and **Slug** are created automatically):
 | ZIP | Plain text | `zip` | **text, not number** (preserves leading zeros) |
 | County | Plain text | `county` | |
 | Population | Number | `population` | for sorting / "largest cities" |
-| Combined rate | Plain text | `combined_rate_pct` | e.g. `8.875%` — shown in copy |
+| Combined rate | Plain text | `combined_rate_pct` | optional/internal — for sorting or filtering only; **don't display it statically** (the live calculator shows the current rate) |
 | Taxable | Switch | `taxable` | |
 | SEO title | Plain text | `seo_title` | → page title |
 | Meta description | Plain text | `meta_description` | → page meta description |
@@ -102,10 +102,12 @@ every city). Bind CMS fields into the page:
 
 - **Page title** (Settings → SEO) → bind to **SEO title**.
 - **Meta description** (Settings → SEO) → bind to **Meta description**.
-- **H1**: `Sales tax in [City], [State]` (bind City + State).
-- **Headline line**: "The combined rate is **[Combined rate]**." (bind Combined rate — this
-  puts the number in static HTML, which is what ranks).
+- **H1**: `[City], [State] Sales Tax Calculator` (bind City + State — no rate number, so it never goes stale).
 - **Intro paragraph** → bind **Intro**.
+- **SEO body** at the bottom → bind the **SEO content** rich-text field.
+
+> Don't put the rate in static page text — rates change with the law and would go stale.
+> The calculator shows the current rate live; the page copy stays evergreen.
 
 Then add an **HTML Embed** element where the calculator should appear:
 

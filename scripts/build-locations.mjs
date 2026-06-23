@@ -145,13 +145,12 @@ function needsReview(state, rate, taxable, levels) {
   );
 }
 
-// Evergreen, per-page SEO body (rich text / HTML). Built from each city's real data —
-// rate, state-vs-local split, county, taxable vs. no-tax — so pages differ substantively
-// rather than reading as the same paragraph with the name swapped.
+// Evergreen, per-page SEO body (rich text / HTML). Deliberately contains NO rate numbers
+// or dollar amounts — those change with the law and would go stale in the CMS. The live
+// calculator owns the current figure; this copy explains structure, taxability, and how
+// to use the tool, so it stays correct indefinitely. It still branches on taxable vs.
+// no-tax and on whether the state has a statewide rate, for accurate wording.
 function seoContent(c, full, combined, stateRate) {
-  const money = (n) => '$' + (Math.round(n * 100) / 100).toFixed(2);
-  const combinedPct = pct(combined);
-  const taxOn100 = combined * 100;
   const city = c.city;
   const countyType = c.state === 'LA' ? 'Parish' : c.state === 'AK' ? 'Borough' : 'County';
   const cnty = c.county ? `${c.county} ${countyType}` : 'the county';
@@ -159,28 +158,28 @@ function seoContent(c, full, combined, stateRate) {
   if (!(combined > 0)) {
     return [
       `<h2>Does ${city}, ${full} have sales tax?</h2>`,
-      `<p>${full} is one of a small group of states with no statewide sales tax, so purchases in ${city} generally aren't taxed at the register. A ${money(100)} item costs ${money(100)} — nothing is added at checkout, and no local sales tax applies in ${city} either, which is why the calculator above returns a rate of ${combinedPct}.</p>`,
+      `<p>No. ${full} is one of a small group of states with no statewide sales tax, so purchases in ${city} generally aren't taxed at the register — the price on the shelf is usually the price you pay. The calculator above confirms this and lets you check how individual product categories are treated.</p>`,
       `<h3>What this means for shoppers</h3>`,
-      `<p>The price on the shelf is usually the price you pay. You won't see a separate sales tax line on most receipts here, which is one reason ${full} draws shoppers making larger purchases. Other taxes can still apply in specific cases — excise taxes on goods like fuel or tobacco, or lodging taxes on hotel stays — but those are separate from general sales tax.</p>`,
+      `<p>You won't see a separate sales tax line on most receipts in ${city}, which is one reason ${full} draws shoppers making larger purchases. Other taxes can still apply in specific cases — excise taxes on goods like fuel or tobacco, or lodging taxes on hotel stays — but those are separate from general sales tax.</p>`,
       `<h3>Selling from ${city}</h3>`,
-      `<p>Because ${full} has no general sales tax, most sellers based in ${city} don't collect one on local sales. If you ship to customers in other states, you may still have sales tax obligations there based on where those customers are. Zamp helps sellers work out exactly where they need to register and collect, and handles the filing in each state.</p>`,
+      `<p>Because ${full} has no general sales tax, most sellers based in ${city} don't collect one on local sales. If you ship to customers in other states, though, you may still have sales tax obligations there based on where those customers are. Zamp helps sellers work out exactly where they need to register and collect, and handles the filing in each state.</p>`,
     ].join('');
   }
 
-  const breakdown = stateRate > 0
-    ? `That combines ${full}'s statewide rate of ${pct(stateRate)} with ${pct(combined - stateRate)} in local tax collected by ${cnty} and any city or special districts covering the address.`
-    : `${full} has no statewide sales tax, so the full ${combinedPct} comes from local taxes in and around ${city}, including ${cnty}.`;
+  const structure = stateRate > 0
+    ? `it's ${full}'s statewide rate combined with local taxes added by ${cnty} and any city or special districts that cover the address`
+    : `${full} doesn't levy a statewide sales tax, so the rate comes entirely from local taxes — ${cnty} and any city or district taxes that apply at the address`;
 
   return [
-    `<h2>How much is sales tax in ${city}, ${full}?</h2>`,
-    `<p>The sales tax rate in ${city} is <strong>${combinedPct}</strong>. ${breakdown} Local rates aren't the same across a metro area, so the total can change from one ZIP code to the next — the ${city} sales tax calculator above uses the local rate so your estimate matches what you'd actually pay at checkout.</p>`,
-    `<h3>Working out the tax on a purchase</h3>`,
-    `<p>To do it by hand, multiply the price by ${combinedPct}. A ${money(100)} purchase in ${city} adds about ${money(taxOn100)}, for a total of ${money(100 + taxOn100)}. The calculator handles this for any amount and breaks the result down by jurisdiction, so you can see how much goes to the state, to ${cnty}, and to local districts. Enter a price and choose a category to get an exact figure for your purchase.</p>`,
+    `<h2>How sales tax works in ${city}, ${full}</h2>`,
+    `<p>Sales tax in ${city} isn't a single flat rate — ${structure}. Because those local pieces differ from one area to the next, the total can vary between ZIP codes even within the same city. The ${city} sales tax calculator above looks up the current rate for the address, so you always see today's figure rather than one that's drifted out of date.</p>`,
+    `<h3>Calculating sales tax on a purchase</h3>`,
+    `<p>Enter the price in the calculator above and choose a category. It applies ${city}'s current combined rate and breaks the result down by jurisdiction, so you can see how much goes to the state, to ${cnty}, and to local districts. Because the rate updates automatically, the total stays accurate even after local rates change.</p>`,
     `<h3>What's taxable, and what isn't</h3>`,
     `<p>Not everything is taxed the same way. Most tangible goods are fully taxable, but groceries and prescription medicine are often exempt or taxed at a reduced rate, and some services fall outside sales tax altogether. Prepared food, clothing, and general merchandise are usually taxed in full. Switch the category in the calculator to see how ${full} treats a specific purchase before you buy it or set up tax on what you sell.</p>`,
     `<h3>Common questions</h3>`,
-    `<p><strong>Why is the rate different in nearby cities?</strong> Counties, cities, and special districts each set their own local sales tax, and they don't all charge the same amount. A neighboring town can sit in a different district and land a fraction of a percent higher or lower, even when the state rate is identical.</p>`,
-    `<p><strong>How often does the ${city} rate change?</strong> State rates rarely move, but local rates can change when voters approve new district taxes, usually at the start of a calendar quarter. If you sell here, it's worth confirming the current figure before each filing — Zamp tracks those changes across every U.S. jurisdiction and files automatically.</p>`,
+    `<p><strong>Why does the rate differ between nearby cities?</strong> Counties, cities, and special districts each set their own local sales tax, and they don't all charge the same amount. A neighboring town can sit in a different district and come out slightly higher or lower, even when the state portion is identical.</p>`,
+    `<p><strong>How often does the rate change?</strong> Statewide rates rarely move, but local rates can change when voters approve new district taxes — usually at the start of a calendar quarter. That's why the calculator looks up the current rate instead of relying on a fixed number, and why Zamp tracks those changes across every U.S. jurisdiction for the businesses that file here.</p>`,
   ].join('');
 }
 
@@ -192,11 +191,11 @@ function seoFields(c, rate, taxable, stateRate) {
   const hasTax = taxable && rate > 0;
   const title = `${c.city}, ${full} Sales Tax Calculator`;
   const metaDescription = hasTax
-    ? `The combined sales tax rate in ${c.city}, ${full} is ${rateStr}. Enter a price to calculate the exact sales tax and total by product category.`
-    : `${c.city}, ${full} has no general sales tax. Use the calculator to check tax by product category and see your total.`;
+    ? `Find the current sales tax in ${c.city}, ${full}. Enter a price and category in the calculator to see the exact tax and total, broken down by state, county, and local district.`
+    : `${c.city}, ${full} has no statewide sales tax. Use the calculator to confirm how product categories are treated and see your total.`;
   const intro = hasTax
-    ? `The combined sales tax rate in ${c.city}, ${full} is ${rateStr}, made up of state, county, and local district rates. Enter a purchase amount below to see the exact tax for what you're buying.`
-    : `${c.city}, ${full} doesn't charge a general sales tax. Use the calculator below to confirm how specific product categories are treated.`;
+    ? `Use the calculator below to find the current sales tax in ${c.city}, ${full}. Enter a purchase amount to see the exact tax, broken down by state, county, and local district.`
+    : `${c.city}, ${full} doesn't charge a statewide sales tax. Use the calculator below to confirm how specific product categories are treated.`;
   const seo_content = seoContent(c, full, rate, stateRate || 0);
   return { name, state_name: full, state_slug: kebab(full), slug, combined_rate: rate.toFixed(5), combined_rate_pct: rateStr, taxable: String(hasTax), seo_title: title, meta_description: metaDescription, intro_text: intro, seo_content };
 }
