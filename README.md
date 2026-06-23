@@ -106,6 +106,33 @@ into the data attributes, plus the script once (e.g. in the page/site footer):
 
 The same embed works across all location pages — each page supplies its own data.
 
+## Data pipeline (building the CMS import)
+
+`scripts/` turns a city list into the `locations.csv` you import into the Webflow CMS.
+
+```bash
+# 1. one-time: download GeoNames US postal data (authoritative zip/city/county)
+curl -sL https://download.geonames.org/export/zip/US.zip -o US.zip && unzip US.zip US.txt
+
+# 2. build a population-ranked seed (plotly top-1k ranking + GeoNames centroid ZIPs)
+node scripts/build-seed.mjs --geonames US.txt --top 500 --out scripts/seed-top500.csv
+
+# 3. enrich: per-city headline rate (via Zamp) + SEO fields -> import CSV
+node scripts/build-locations.mjs scripts/seed-top500.csv data/locations.csv --concurrency 4
+```
+
+- Representative ZIP = the one nearest the city centroid (avoids PO-box ZIPs that
+  geocode to state level only).
+- **`needs_review` column**: a taxable city that resolves to state-level only in a state
+  that *has* local taxes is flagged — usually means the Zamp account lacks that
+  locality's local rate. Verify these against the production key before publishing.
+- `data/locations.sample.csv` (20 cities) and `data/locations.csv` (500-city pilot) are
+  committed as reference output.
+
+> ⚠️ Accuracy depends on the Zamp account's rate coverage. The demo key under-reports
+> local tax for some jurisdictions (e.g. several Alabama/Texas cities) — run the pipeline
+> with the production key and review the `needs_review` rows before going live.
+
 ## Tax categories
 
 Defined in `src/lib/taxCodes.ts`. Current set: General goods, Clothing & apparel,

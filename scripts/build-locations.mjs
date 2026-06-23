@@ -107,13 +107,26 @@ async function headlineRate(c) {
   const dest = (d.taxes || []).filter((t) => t.state === c.state);
   const rate = dest.reduce((s, t) => s + (t.taxRate || 0), 0);
   const taxable = dest.reduce((s, t) => s + (t.taxableAmount || 0), 0) > 0;
-  return { rate, taxable };
+  const levels = [...new Set(dest.filter((t) => (t.taxRate || 0) > 0).map((t) => t.jurisdictionDivision))];
+  return { rate, taxable, levels };
 }
 
 // ---- SEO field generation ----
 const kebab = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 // Tax rates need up to 3 decimals (e.g. NY = 8.875%), trimmed of trailing zeros.
 const pct = (n) => (n * 100).toFixed(3).replace(/\.?0+$/, '') + '%';
+
+// States with NO local sales tax — a state-only result is CORRECT here, not a gap.
+const NO_LOCAL_STATES = new Set(['CT', 'IN', 'KY', 'ME', 'MD', 'MA', 'MI', 'NJ', 'RI', 'DC']);
+
+// In a state that DOES have local taxes, a taxable city resolving to STATE-level only
+// usually means the account is missing that locality's local rate (e.g. some
+// self-administered Alabama/Texas cities) — flag it for a look before publishing.
+function needsReview(state, rate, taxable, levels) {
+  return String(
+    taxable && rate > 0 && levels.length === 1 && levels[0] === 'STATE' && !NO_LOCAL_STATES.has(state)
+  );
+}
 
 function seoFields(c, rate, taxable) {
   const slug = `${kebab(c.city)}-${c.state.toLowerCase()}`;
@@ -144,7 +157,7 @@ async function pool(items, size, worker) {
 }
 
 // ---- main ----
-const COLUMNS = ['city', 'state', 'zip', 'county', 'population', 'slug', 'combined_rate', 'combined_rate_pct', 'taxable', 'address_valid', 'seo_title', 'meta_description', 'intro_text'];
+const COLUMNS = ['city', 'state', 'zip', 'county', 'population', 'slug', 'combined_rate', 'combined_rate_pct', 'taxable', 'jurisdiction_levels', 'needs_review', 'address_valid', 'seo_title', 'meta_description', 'intro_text'];
 
 let cities = parseCsv(readFileSync(inPath, 'utf8'));
 if (LIMIT > 0) cities = cities.slice(0, LIMIT);
@@ -155,9 +168,9 @@ const rows = await pool(cities, CONCURRENCY, async (c) => {
   const [addr, rate] = await Promise.all([validateAddress(c), headlineRate(c).catch(() => null)]);
   done++;
   if (done % 5 === 0 || done === cities.length) console.error(`  ${done}/${cities.length}`);
-  if (!rate) return { ...c, slug: kebab(c.city) + '-' + c.state.toLowerCase(), combined_rate: '', combined_rate_pct: 'ERROR', taxable: '', address_valid: addr.ok, seo_title: '', meta_description: '', intro_text: '' };
+  if (!rate) return { ...c, slug: kebab(c.city) + '-' + c.state.toLowerCase(), combined_rate: '', combined_rate_pct: 'ERROR', taxable: '', jurisdiction_levels: '', needs_review: 'true', address_valid: addr.ok, seo_title: '', meta_description: '', intro_text: '' };
   const seo = seoFields(c, rate.rate, rate.taxable);
-  return { ...c, ...seo, zip: addr.zip, address_valid: addr.ok === null ? 'skipped' : String(addr.ok) };
+  return { ...c, ...seo, zip: addr.zip, jurisdiction_levels: rate.levels.join('|'), needs_review: needsReview(c.state, rate.rate, rate.taxable, rate.levels), address_valid: addr.ok === null ? 'skipped' : String(addr.ok) };
 });
 
 writeFileSync(outPath, toCsv(rows, COLUMNS));
