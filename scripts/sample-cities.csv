@@ -1,0 +1,21 @@
+city,state,zip,county,population
+New York,NY,10007,New York,8336817
+Los Angeles,CA,90012,Los Angeles,3898747
+Chicago,IL,60602,Cook,2746388
+Houston,TX,77002,Harris,2304580
+Phoenix,AZ,85004,Maricopa,1608139
+Philadelphia,PA,19107,Philadelphia,1576251
+San Antonio,TX,78205,Bexar,1434625
+San Diego,CA,92101,San Diego,1386932
+Dallas,TX,75201,Dallas,1304379
+Austin,TX,78701,Travis,961855
+San Jose,CA,95113,Santa Clara,1013240
+Jacksonville,FL,32202,Duval,949611
+Columbus,OH,43215,Franklin,905748
+Charlotte,NC,28202,Mecklenburg,874579
+Indianapolis,IN,46204,Marion,887642
+Seattle,WA,98104,King,737015
+Denver,CO,80202,Denver,715522
+Nashville,TN,37201,Davidson,689447
+Boston,MA,02108,Suffolk,675647
+Portland,OR,97204,Multnomah,652503
