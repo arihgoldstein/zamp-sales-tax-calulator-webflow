@@ -18,7 +18,7 @@ import → build the template → publish.
 ## 1. Deploy the Webflow Cloud app (the calculator backend + widget)
 
 1. Webflow dashboard → **New Project → App** → **Import a GitHub repository** →
-   `zamptax/zamp-sales-tax-tool-webflow`.
+   `arihgoldstein/zamp-sales-tax-calulator-webflow`.
 2. **Mount path:** `/sales-tax`  (must match `MOUNT_PATH` in `astro.config.mjs`).
 3. **Environment variables:**
    - `ZAMP_API_KEY` → your production key → toggle **Secret**.

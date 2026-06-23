@@ -68,7 +68,7 @@ curl -s -X POST http://localhost:4321/sales-tax/api/quote \
 
 ## Deploy to Webflow Cloud
 
-1. Push to GitHub (this repo: `zamptax/zamp-sales-tax-tool-webflow`).
+1. Push to GitHub (this repo: `arihgoldstein/zamp-sales-tax-calulator-webflow`).
 2. Webflow dashboard → **New Project → App** → import this repo.
 3. Set the **Mount path** to `/sales-tax` (must match `MOUNT_PATH` in `astro.config.mjs`).
 4. Add an environment variable **`ZAMP_API_KEY`** and toggle it **Secret**.
