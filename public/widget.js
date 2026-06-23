@@ -122,30 +122,27 @@
     var zipEl = root.querySelector('#zsc-zip');
     var resultEl = root.querySelector('#zsc-result');
 
-    var clsCache = {};    // cat:zip -> { mode, rate, taxable, jurisdictions, note }
-    var exactCache = {};  // cat:zip:dollars -> { tax, effectiveRate, jurisdictions, taxable }
-    var current = null;   // active classification
-    var zipTimer = null, amtTimer = null;
+    // Every result is a real Zamp calc for the exact amount; we just memoize by exact
+    // input so re-typing a seen value is instant. No client-side rate extrapolation.
+    var cache = {};        // cat:zip:cents -> { taxable, tax, effectiveRate, jurisdictions, note }
+    var debounce = null;   // input debounce timer
+    var reqId = 0;         // guards against out-of-order responses
+    var lastNote = null;   // category note for the active selection
 
-    function ck(cat, zip) { return cat + ':' + zip; }
-    function round2(n) { return Math.round(n * 100) / 100; }
     function amountVal() { var a = parseFloat(amtEl.value); return (isNaN(a) || a < 0) ? 0 : a; }
+    function keyFor() { return catEl.value + ':' + (zipEl.value || '').trim() + ':' + Math.round(amountVal() * 100); }
 
-    function renderLoading() {
-      resultEl.innerHTML =
-        '<div class="zsc-row"><div><div class="zsc-taxlbl">Estimated tax</div>' +
-        '<div class="zsc-tax zsc-skeleton">$—</div></div></div>';
-    }
     function renderError(msg) { resultEl.innerHTML = '<div class="zsc-err">' + esc(msg) + '</div>'; }
+    function setBusy(on) { resultEl.style.opacity = on ? '0.55' : '1'; }
 
-    // Render a computed result. o = { taxable, tax, rate, jurisdictions, exact }
-    function paint(o) {
+    function paint(d) {
+      setBusy(false);
       var amount = amountVal();
-      var tax = o.taxable ? o.tax : 0;
+      var tax = d.taxable ? d.tax : 0;
       var total = amount + tax;
 
-      var badge = o.taxable
-        ? '<span class="zsc-badge tax">Taxable · ' + pct(o.rate) + (o.exact ? ' here' : '') + '</span>'
+      var badge = d.taxable
+        ? '<span class="zsc-badge tax">Taxable · ' + pct(d.effectiveRate) + '</span>'
         : '<span class="zsc-badge exempt">Exempt here</span>';
 
       var html =
@@ -155,87 +152,54 @@
           '<div class="zsc-total">Total with tax: <strong>' + usd.format(total) + '</strong></div>' +
         '</div>' + badge + '</div>';
 
-      // Flat-rate breakdown only makes sense for linear locations.
-      if (o.taxable && !o.exact && o.jurisdictions && o.jurisdictions.length) {
+      if (d.taxable && d.jurisdictions && d.jurisdictions.length) {
         html += '<div class="zsc-break">';
-        o.jurisdictions.forEach(function (j) {
+        d.jurisdictions.forEach(function (j) {
           html += '<div class="zsc-break-row"><span class="zsc-jname">' + esc(j.name) + '</span><span class="zsc-jrate">' + pct(j.rate) + '</span></div>';
         });
-        html += '<div class="zsc-break-row tot"><span class="zsc-jname">Combined rate</span><span class="zsc-jrate">' + pct(o.rate) + '</span></div></div>';
+        html += '<div class="zsc-break-row tot"><span class="zsc-jname">Effective rate at ' + usd.format(amount) + '</span><span class="zsc-jrate">' + pct(d.effectiveRate) + '</span></div></div>';
       }
-
-      if (o.exact && o.taxable) {
-        html += '<div class="zsc-note">Here the tax isn’t a flat percentage — it changes with the purchase amount (local caps/thresholds), so this is calculated for ' + usd.format(amount) + '.</div>';
-      } else if (current && current.note) {
-        html += '<div class="zsc-note">' + esc(current.note) + '</div>';
-      }
+      if (lastNote) html += '<div class="zsc-note">' + esc(lastNote) + '</div>';
       resultEl.innerHTML = html;
     }
 
-    function post(extra) {
-      var body = { taxCode: catEl.value, zip: (zipEl.value || '').trim(), state: cfg.state, city: cfg.city, line1: cfg.line1 };
-      if (extra) for (var k in extra) body[k] = extra[k];
-      return fetch(cfg.api, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); });
-    }
-
-    function renderLinear() {
-      paint({ taxable: current.taxable, tax: round2(amountVal() * current.rate), rate: current.rate, jurisdictions: current.jurisdictions, exact: false });
-    }
-
-    function renderExact() {
-      var cat = catEl.value, zip = (zipEl.value || '').trim(), dollars = Math.round(amountVal());
-      var k = ck(cat, zip) + ':' + dollars;
-      if (exactCache[k]) {
-        var e = exactCache[k];
-        paint({ taxable: e.taxable, tax: e.tax, rate: e.effectiveRate, jurisdictions: e.jurisdictions, exact: true });
-        return;
-      }
-      renderLoading();
-      post({ amount: amountVal() }).then(function (res) {
-        if (!res.ok) { renderError(res.d && res.d.error ? res.d.error : 'Could not calculate tax.'); return; }
-        exactCache[k] = { tax: res.d.tax, effectiveRate: res.d.effectiveRate, jurisdictions: res.d.jurisdictions, taxable: res.d.taxable };
-        // Ignore if the inputs changed while this request was in flight.
-        if (catEl.value === cat && (zipEl.value || '').trim() === zip && Math.round(amountVal()) === dollars) {
-          paint({ taxable: res.d.taxable, tax: res.d.tax, rate: res.d.effectiveRate, jurisdictions: res.d.jurisdictions, exact: true });
-        }
-      }).catch(function () { renderError('Network error — please try again.'); });
-    }
-
-    function recompute() {
-      if (!current) return;
-      if (current.mode === 'linear') renderLinear(); else renderExact();
-    }
-
-    function loadClassification() {
-      var cat = catEl.value, zip = (zipEl.value || '').trim();
+    function update() {
+      var zip = (zipEl.value || '').trim();
       if (!/^\d{5}$/.test(zip)) { renderError('Enter a valid 5-digit ZIP code.'); return; }
-      var key = ck(cat, zip);
-      if (clsCache[key]) { current = clsCache[key]; recompute(); return; }
 
-      renderLoading();
-      post({ amount: amountVal() }).then(function (res) {
-        if (!res.ok) { renderError(res.d && res.d.error ? res.d.error : 'Could not fetch the rate.'); return; }
-        var d = res.d;
-        current = { mode: d.mode, rate: d.rate, taxable: d.taxable, jurisdictions: d.jurisdictions, note: d.note };
-        clsCache[key] = current;
-        // The classification call for a non-linear area already computed this amount.
-        if (d.mode === 'exact' && typeof d.tax === 'number') {
-          exactCache[ck(cat, zip) + ':' + Math.round(d.amount)] = { tax: d.tax, effectiveRate: d.effectiveRate, jurisdictions: d.jurisdictions, taxable: d.taxable };
-        }
-        recompute();
-      }).catch(function () { renderError('Network error — please try again.'); });
+      var k = keyFor();
+      if (cache[k]) { lastNote = cache[k].note; paint(cache[k]); return; }
+
+      setBusy(true);
+      var myId = ++reqId;
+      var amount = amountVal();
+      fetch(cfg.api, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taxCode: catEl.value, zip: zip, state: cfg.state, city: cfg.city, line1: cfg.line1, amount: amount })
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, status: r.status, d: d }; }); })
+        .then(function (res) {
+          if (myId !== reqId) return; // a newer request superseded this one
+          if (!res.ok) {
+            if (res.status === 429) renderError('High demand right now — please try again in a moment.');
+            else renderError(res.d && res.d.error ? res.d.error : 'Could not calculate tax.');
+            return;
+          }
+          var entry = { taxable: res.d.taxable, tax: res.d.tax, effectiveRate: res.d.effectiveRate, jurisdictions: res.d.jurisdictions, note: res.d.note };
+          cache[k] = entry;
+          lastNote = entry.note;
+          paint(entry);
+        })
+        .catch(function () { if (myId === reqId) renderError('Network error — please try again.'); });
     }
 
-    amtEl.addEventListener('input', function () {
-      if (!current) return;
-      if (current.mode === 'linear') renderLinear();
-      else { clearTimeout(amtTimer); amtTimer = setTimeout(renderExact, 450); }
-    });
-    catEl.addEventListener('change', loadClassification);
-    zipEl.addEventListener('input', function () { clearTimeout(zipTimer); zipTimer = setTimeout(loadClassification, 450); });
+    function debounced() { clearTimeout(debounce); debounce = setTimeout(update, 400); }
 
-    loadClassification();
+    amtEl.addEventListener('input', debounced);
+    catEl.addEventListener('change', update);
+    zipEl.addEventListener('input', debounced);
+
+    update();
   }
 
   function init() {

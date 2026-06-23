@@ -1,14 +1,11 @@
 import type { APIRoute } from 'astro';
 import { resolveTaxCode } from '../../lib/taxCodes';
-import { fetchCalc, ratesMatch, type CalcResult, type JurisdictionLine } from '../../lib/zamp';
-import { classKey, exactKey, getCached, setCached } from '../../lib/cache';
+import { fetchCalc, ZampError } from '../../lib/zamp';
+import { quoteKey, getCached, setCached } from '../../lib/cache';
 
 export const prerender = false;
 
-// Probe amounts used to classify linear vs non-linear. Endpoints straddle every known
-// cap/threshold (clothing exemptions ~$110-175, TN single-article caps at $1.6k/$3.2k).
-const PROBE_LO = 100;
-const PROBE_HI = 25000;
+const DEFAULT_AMOUNT = 100;
 const MAX_AMOUNT = 100_000_000;
 
 function json(obj: unknown, status = 200, maxAge = 300) {
@@ -18,21 +15,13 @@ function json(obj: unknown, status = 200, maxAge = 300) {
   });
 }
 
-interface Classification {
-  mode: 'linear' | 'exact';
-  taxable: boolean;
-  rate?: number; // present when linear
-  jurisdictions: JurisdictionLine[]; // representative breakdown
-}
-
 /**
  * POST /sales-tax/api/quote
  * body: { taxCode, zip, state, city?, line1?, amount? }
+ * → { taxable, amount, tax, effectiveRate, jurisdictions[], label, note }
  *
- * LINEAR response: { mode:'linear', taxable, rate, jurisdictions }
- *   → browser computes tax = amount × rate for any amount (exact).
- * EXACT response:  { mode:'exact', taxable, amount, tax, effectiveRate, jurisdictions }
- *   → tax depends on amount here; browser re-requests when the amount changes.
+ * Always a real Zamp calculation for the exact amount (no extrapolation). Result is
+ * memoized by exact input for 7 days. The Zamp key stays in locals.runtime.env.
  */
 export const POST: APIRoute = async ({ request, locals }) => {
   const env = (locals as any).runtime?.env ?? {};
@@ -51,7 +40,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const state = String(payload?.state ?? '').trim().toUpperCase();
   const city = String(payload?.city ?? '').trim();
   const line1 = String(payload?.line1 ?? '').trim() || '1 Main St';
-  const amount = Number(payload?.amount ?? PROBE_LO);
+  const amount = Number(payload?.amount ?? DEFAULT_AMOUNT);
 
   if (!option) return json({ error: 'Unknown tax category.' }, 400, 0);
   if (!/^\d{5}$/.test(zip)) return json({ error: 'ZIP must be 5 digits.' }, 400, 0);
@@ -59,58 +48,51 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!Number.isFinite(amount) || amount < 0 || amount > MAX_AMOUNT)
     return json({ error: 'Invalid amount.' }, 400, 0);
 
+  const version = String(env.RATE_CACHE_VERSION ?? '1');
+  const cents = Math.round(amount * 100);
+  const key = quoteKey(version, state, zip, option.zampCode, cents);
   const nowMs = Date.now();
-  const now = new Date(nowMs).toISOString();
-  const call = (amt: number) =>
-    fetchCalc({ apiKey, line1, city, state, zip, zampCode: option.zampCode, amount: amt, now });
 
   try {
-    // 1) Classify this (state, zip, category) once, then cache.
-    const cKey = classKey(state, zip, option.zampCode);
-    let cls = await getCached<Classification>(env, cKey, nowMs);
-
-    if (!cls) {
-      const [lo, hi] = await Promise.all([call(PROBE_LO), call(PROBE_HI)]);
-      const linear = ratesMatch(lo.effectiveRate, hi.effectiveRate) && ratesMatch(lo.sumRate, hi.sumRate);
-      if (linear) {
-        cls = { mode: 'linear', taxable: hi.taxable, rate: hi.sumRate, jurisdictions: hi.jurisdictions };
-      } else {
-        cls = { mode: 'exact', taxable: hi.taxable || lo.taxable, jurisdictions: hi.jurisdictions };
-      }
-      await setCached(env, cKey, cls, nowMs);
-    }
-
-    const common = {
-      taxCode: option.id,
-      label: option.label,
-      note: option.note ?? null,
-      state,
-      zip,
-    };
-
-    if (cls.mode === 'linear') {
-      return json({ ...common, mode: 'linear', taxable: cls.taxable, rate: cls.rate, jurisdictions: cls.jurisdictions });
-    }
-
-    // 2) Non-linear: return the exact tax for the requested amount (cached per dollar).
-    const dollars = Math.round(amount);
-    const eKey = exactKey(state, zip, option.zampCode, dollars);
-    let exact = await getCached<CalcResult>(env, eKey, nowMs);
-    if (!exact) {
-      exact = await call(Math.max(dollars, 0));
-      await setCached(env, eKey, exact, nowMs);
+    let result = await getCached<any>(env, key, nowMs);
+    let cached = !!result;
+    if (!result) {
+      const r = await fetchCalc({
+        apiKey,
+        line1,
+        city,
+        state,
+        zip,
+        zampCode: option.zampCode,
+        amount: cents / 100,
+        now: new Date(nowMs).toISOString(),
+      });
+      result = {
+        taxable: r.taxable,
+        amount: r.amount,
+        tax: r.taxDue,
+        effectiveRate: r.effectiveRate,
+        jurisdictions: r.jurisdictions,
+      };
+      await setCached(env, key, result, nowMs);
+      cached = false;
     }
 
     return json({
-      ...common,
-      mode: 'exact',
-      taxable: exact.taxable,
-      amount: exact.amount,
-      tax: exact.taxDue,
-      effectiveRate: exact.effectiveRate,
-      jurisdictions: exact.jurisdictions,
+      taxCode: option.id,
+      label: option.label,
+      note: option.note ?? null,
+      ...result,
+      state,
+      zip,
+      cached,
     });
   } catch (err: any) {
+    // Surface rate limiting distinctly so the widget can ask the visitor to retry,
+    // rather than ever showing an incorrect number.
+    if (err instanceof ZampError && err.status === 429) {
+      return json({ error: 'Busy right now — please try again in a moment.', retry: true }, 429, 0);
+    }
     return json({ error: 'Calculation failed.', detail: String(err?.message ?? err) }, 502, 0);
   }
 };

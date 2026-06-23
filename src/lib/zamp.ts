@@ -1,16 +1,9 @@
-// Thin client for the Zamp calculations API + helpers for the linear/exact model.
+// Thin client for the Zamp calculations API.
 //
-// Sales tax is USUALLY linear in amount (tax = amount × rate), but NOT always: some
-// jurisdictions cap or threshold the tax (e.g. Tennessee's single-article local cap,
-// some states' clothing exemptions), so the effective rate changes with the amount.
-//
-// We therefore probe each (state, zip, category) at two amounts:
-//   - if the effective rate is identical → LINEAR: cache the full-precision rate and let
-//     the browser compute tax for any amount locally (exact, zero extra API calls).
-//   - if it differs → NON-LINEAR: "exact mode", call Zamp live with the real amount.
-//
-// Full precision matters: we sum each jurisdiction's `taxRate` (e.g. 0.0625 + 0.01)
-// rather than dividing a per-cent-rounded total, which previously lost precision.
+// We do NOT extrapolate. Every quote shown to a visitor is a real Zamp calculation for
+// their exact amount, so caps/thresholds (e.g. TN single-article caps, clothing
+// exemptions) are always reflected correctly. The cache (see cache.ts) only memoizes
+// these real results by exact input, so a cached value can be stale but never wrong.
 
 const ZAMP_URL = 'https://api.zamp.com/calculations';
 
@@ -40,6 +33,16 @@ export interface CalcInput {
   zampCode: string;
   amount: number;
   now: string; // ISO timestamp injected by caller
+}
+
+/** Error thrown by fetchCalc; carries the upstream HTTP status (e.g. 429). */
+export class ZampError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ZampError';
+    this.status = status;
+  }
 }
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -72,7 +75,7 @@ export async function fetchCalc(input: CalcInput): Promise<CalcResult> {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(`Zamp ${res.status}: ${text.slice(0, 300)}`);
+    throw new ZampError(res.status, `Zamp ${res.status}: ${text.slice(0, 300)}`);
   }
 
   const data: any = await res.json();
@@ -108,12 +111,4 @@ function aggregate(lines: any[]): JurisdictionLine[] {
     .filter(([, rate]) => rate > 0)
     .sort((a, b) => LEVEL_ORDER.indexOf(a[0]) - LEVEL_ORDER.indexOf(b[0]))
     .map(([level, rate]) => ({ level, name: LEVEL_LABELS[level] || 'Other', rate }));
-}
-
-// Two effective rates are "the same" if they match within rounding noise. At the low
-// probe ($100) cent-rounding can move the effective rate by at most ~0.005%, so a
-// 0.05-percentage-point tolerance never flags a linear rate yet still catches real
-// caps/thresholds (e.g. Tennessee moved ~1 full point between probes).
-export function ratesMatch(a: number, b: number): boolean {
-  return Math.abs(a - b) <= 0.0005;
 }
