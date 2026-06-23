@@ -1,0 +1,86 @@
+---
+// Phase 0 demo page — stands in for a Webflow CMS location page so we can see the
+// full loop locally. In production the page itself is a Webflow Collection page; only
+// the API route + widget.js are served by this Webflow Cloud app.
+//
+// It also demonstrates the SEO move: the headline rate is rendered server-side into the
+// HTML (in prod this value comes precomputed from the CMS, not a live call per request).
+import { fetchRate } from '../lib/zamp';
+import { resolveTaxCode } from '../lib/taxCodes';
+
+const LOC = { city: 'Los Angeles', state: 'CA', zip: '90012', line1: '200 N Spring St' };
+// Normalize the mount path to no trailing slash; Astro's BASE_URL form varies by version.
+const base = import.meta.env.BASE_URL.replace(/\/+$/, ''); // -> "/sales-tax"
+const env = (Astro.locals as any).runtime?.env ?? {};
+
+let headlineRate: number | null = null;
+let headlineErr: string | null = null;
+if (env.ZAMP_API_KEY) {
+  try {
+    const general = resolveTaxCode('general')!;
+    const r = await fetchRate({ apiKey: env.ZAMP_API_KEY, ...LOC, zampCode: general.zampCode });
+    headlineRate = r.rate;
+  } catch (e: any) {
+    headlineErr = String(e?.message ?? e);
+  }
+} else {
+  headlineErr = 'ZAMP_API_KEY not set — add it to .dev.vars';
+}
+
+const pct = (n: number) => (n * 100).toFixed(2) + '%';
+const title = `Sales Tax Calculator for ${LOC.city}, ${LOC.state} (${LOC.zip})`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} | Zamp</title>
+    <meta
+      name="description"
+      content={`Calculate sales tax in ${LOC.city}, ${LOC.state}. Enter a price and category to estimate the tax and total. Rates powered by Zamp.`}
+    />
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; max-width: 720px; margin: 0 auto; padding: 48px 20px 80px; line-height: 1.6; }
+      h1 { font-size: 30px; letter-spacing: -0.02em; margin: 0 0 8px; }
+      .lede { font-size: 17px; color: #475569; margin: 0 0 8px; }
+      .headline { font-size: 15px; color: #334155; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin: 20px 0 32px; }
+      .headline strong { color: #4338ca; }
+      .tag { display: inline-block; font-size: 12px; color: #64748b; background: #eef2f7; border-radius: 999px; padding: 3px 10px; margin-bottom: 16px; }
+      .err { color: #b91c1c; }
+      footer { margin-top: 48px; font-size: 13px; color: #94a3b8; }
+    </style>
+  </head>
+  <body>
+    <span class="tag">Phase 0 demo · mock CMS page</span>
+    <h1>Sales tax in {LOC.city}, {LOC.state}</h1>
+    <p class="lede">Use the calculator below to estimate sales tax on a purchase in {LOC.city} ({LOC.zip}).</p>
+
+    <div class="headline">
+      {headlineRate !== null ? (
+        <span>The combined sales tax rate for general goods in <strong>{LOC.city}, {LOC.state} {LOC.zip}</strong> is about <strong>{pct(headlineRate)}</strong>.</span>
+      ) : (
+        <span class="err">Headline rate unavailable: {headlineErr}</span>
+      )}
+    </div>
+
+    <!-- ↓↓↓ This is exactly what gets embedded on each Webflow CMS page ↓↓↓ -->
+    <div
+      data-zamp-calc
+      data-city={LOC.city}
+      data-state={LOC.state}
+      data-zip={LOC.zip}
+      data-line1={LOC.line1}
+      data-api={`${base}/api/quote`}
+    >
+    </div>
+    <script src={`${base}/widget.js`} defer></script>
+    <!-- ↑↑↑ end embed ↑↑↑ -->
+
+    <footer>
+      Phase 0 working slice. In production the location values come from the Webflow CMS
+      collection item; this page is just a local stand-in.
+    </footer>
+  </body>
+</html>
