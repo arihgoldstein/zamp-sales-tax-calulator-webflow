@@ -157,7 +157,7 @@ function seoFields(c, rate, taxable) {
   const intro = hasTax
     ? `The combined sales tax rate in ${c.city}, ${full} is ${rateStr}, made up of state, county, and local district rates. Enter a purchase amount below to see the exact tax for what you're buying.`
     : `${c.city}, ${full} doesn't charge a general sales tax. Use the calculator below to confirm how specific product categories are treated.`;
-  return { name, state_name: full, slug, combined_rate: rate.toFixed(5), combined_rate_pct: rateStr, taxable: String(hasTax), seo_title: title, meta_description: metaDescription, intro_text: intro };
+  return { name, state_name: full, state_slug: kebab(full), slug, combined_rate: rate.toFixed(5), combined_rate_pct: rateStr, taxable: String(hasTax), seo_title: title, meta_description: metaDescription, intro_text: intro };
 }
 
 // ---- concurrency pool ----
@@ -175,7 +175,7 @@ async function pool(items, size, worker) {
 }
 
 // ---- main ----
-const COLUMNS = ['name', 'city', 'state', 'state_name', 'zip', 'county', 'population', 'slug', 'combined_rate', 'combined_rate_pct', 'taxable', 'jurisdiction_levels', 'needs_review', 'address_valid', 'seo_title', 'meta_description', 'intro_text'];
+const COLUMNS = ['name', 'city', 'state', 'state_name', 'state_slug', 'zip', 'county', 'population', 'slug', 'combined_rate', 'combined_rate_pct', 'taxable', 'jurisdiction_levels', 'needs_review', 'address_valid', 'seo_title', 'meta_description', 'intro_text'];
 
 let cities = parseCsv(readFileSync(inPath, 'utf8'));
 if (LIMIT > 0) cities = cities.slice(0, LIMIT);
@@ -186,7 +186,7 @@ const rows = await pool(cities, CONCURRENCY, async (c) => {
   const [addr, rate] = await Promise.all([validateAddress(c), headlineRate(c).catch(() => null)]);
   done++;
   if (done % 5 === 0 || done === cities.length) console.error(`  ${done}/${cities.length}`);
-  if (!rate) return { ...c, name: `${c.city}, ${stateFull(c.state)}`, state_name: stateFull(c.state), slug: `${kebab(c.city)}-${kebab(stateFull(c.state))}`, combined_rate: '', combined_rate_pct: 'ERROR', taxable: '', jurisdiction_levels: '', needs_review: 'true', address_valid: addr.ok, seo_title: '', meta_description: '', intro_text: '' };
+  if (!rate) return { ...c, name: `${c.city}, ${stateFull(c.state)}`, state_name: stateFull(c.state), state_slug: kebab(stateFull(c.state)), slug: `${kebab(c.city)}-${kebab(stateFull(c.state))}`, combined_rate: '', combined_rate_pct: 'ERROR', taxable: '', jurisdiction_levels: '', needs_review: 'true', address_valid: addr.ok, seo_title: '', meta_description: '', intro_text: '' };
   const seo = seoFields(c, rate.rate, rate.taxable);
   return { ...c, ...seo, zip: addr.zip, jurisdiction_levels: rate.levels.join('|'), needs_review: needsReview(c.state, rate.rate, rate.taxable, rate.levels), address_valid: addr.ok === null ? 'skipped' : String(addr.ok) };
 });
