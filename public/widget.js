@@ -96,9 +96,9 @@
     '.zsc-pb:hover{opacity:.68}',
     '.zsc-pb:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(24,62,61,.18)}',
     '.zsc-pb-pre{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--neutral)}',
-    '.zsc-pb-main{display:inline-flex;align-items:center;gap:9px}',
-    '.zsc-pb-main img{height:17px;width:auto;display:block}',
-    '.zsc-pb-api{font-family:var(--head);font-size:17px;font-weight:500;letter-spacing:-.01em;color:var(--ink)}',
+    '.zsc-pb-main{display:inline-flex;align-items:center;gap:7px}',
+    '.zsc-pb-main img{height:13px;width:auto;display:block}',
+    '.zsc-pb-api{font-family:var(--body);font-size:14px;font-weight:600;color:var(--ink)}',
     '.zsc-result{background:var(--green);border-color:var(--green);color:var(--white);display:flex;flex-direction:column}',
     '.zsc-rpad{padding:28px;display:flex;flex-direction:column;height:100%;transition:opacity .2s var(--ease)}',
     '.zsc-rpad.stale{opacity:.42}',
@@ -183,7 +183,7 @@
           '<p class="zsc-hint" id="zsc-hint">Inputs changed — calculate to update.</p>' +
           '<a class="zsc-pb" href="https://zamp.com" target="_blank" rel="noopener" aria-label="Powered by Zamp Sales Tax API">' +
             '<span class="zsc-pb-pre">Powered by</span>' +
-            '<span class="zsc-pb-main"><img src="' + ZAMP_LOGO + '" alt="Zamp" width="55" height="17"><span class="zsc-pb-api">Sales Tax API</span></span>' +
+            '<span class="zsc-pb-main"><img src="' + ZAMP_LOGO + '" alt="Zamp" width="42" height="13"><span class="zsc-pb-api">Sales Tax API</span></span>' +
           '</a>' +
         '</div></div>' +
         '<div class="zsc-panel zsc-result"><div class="zsc-rpad" id="zsc-rpad"></div></div>' +
