@@ -18,16 +18,50 @@
 (function () {
   'use strict';
 
+  // Grouped pick list shown in the dropdown. IDs must match the server allowlist in
+  // src/lib/taxCodes.ts — the proxy rejects any id not defined there. Weighted toward
+  // ecommerce/retail and food & beverage, Zamp's biggest verticals.
   var CATEGORIES = [
-    { id: 'general', label: 'General goods' },
-    { id: 'clothing', label: 'Clothing' },
-    { id: 'groceries', label: 'Groceries (food for home)' },
-    { id: 'prepared-food', label: 'Prepared food / restaurant' },
-    { id: 'candy', label: 'Candy' },
-    { id: 'digital', label: 'Digital products' },
-    { id: 'saas', label: 'Software (SaaS)' },
-    { id: 'services', label: 'Professional services' }
+    { g: 'Retail & general', items: [
+      { id: 'general', label: 'General goods' },
+      { id: 'clothing', label: 'Clothing' },
+      { id: 'accessories', label: 'Apparel accessories' },
+      { id: 'cosmetics', label: 'Cosmetics & personal care' },
+      { id: 'feminine-hygiene', label: 'Feminine hygiene products' },
+      { id: 'prescription', label: 'Prescription drugs' },
+      { id: 'otc', label: 'Over-the-counter medicine' },
+      { id: 'pet-food', label: 'Pet food' }
+    ] },
+    { g: 'Digital', items: [
+      { id: 'digital', label: 'Digital products' },
+      { id: 'software', label: 'Downloaded software' },
+      { id: 'saas', label: 'Software (SaaS)' },
+      { id: 'streaming', label: 'Streaming subscription' },
+      { id: 'ebooks', label: 'eBooks' }
+    ] },
+    { g: 'Food & beverage', items: [
+      { id: 'groceries', label: 'Groceries (food for home)' },
+      { id: 'prepared-food', label: 'Prepared food / restaurant' },
+      { id: 'candy', label: 'Candy' },
+      { id: 'snacks', label: 'Snack food' },
+      { id: 'soda', label: 'Soft drinks / soda' },
+      { id: 'water', label: 'Bottled water' },
+      { id: 'juice', label: 'Juice' },
+      { id: 'supplements', label: 'Vitamins & supplements' }
+    ] },
+    { g: 'Services', items: [
+      { id: 'services', label: 'Professional services' }
+    ] }
   ];
+
+  // Combined fine print shown at the bottom of the green result tile (replaces the old
+  // standalone disclaimer + "calculated by Zamp" note).
+  var FINE = '<p class="zsc-fine">For general information only — not tax advice. Each estimate is ' +
+    'calculated by Zamp for the exact amount entered, with local caps and exemptions included; ' +
+    'the rate can still vary by precise address within a ZIP code. Sales tax data powered by Zamp.</p>';
+
+  // Black Zamp wordmark from the site CDN, used in the "Powered by" badge.
+  var ZAMP_LOGO = 'https://cdn.prod.website-files.com/69f3731843be4ce24ae7dea2/69fa05516f03437e8e9e6511_Logo.svg';
 
   var STYLE_ID = 'zsc-styles';
   var CSS = [
@@ -58,6 +92,10 @@
     '.zsc-btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(24,62,61,.28)}',
     '.zsc-hint{font-size:12.5px;color:var(--orange);margin:12px 0 0;min-height:1em;opacity:0;transition:opacity .2s}',
     '.zsc-hint.show{opacity:1}',
+    '.zsc-pb{display:inline-flex;align-items:center;gap:7px;margin-top:20px;text-decoration:none;color:var(--neutral);font-size:11.5px;letter-spacing:.01em;transition:color .2s var(--ease)}',
+    '.zsc-pb:hover{color:var(--ink)}',
+    '.zsc-pb:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(24,62,61,.18)}',
+    '.zsc-pb img{height:13px;width:auto;display:block}',
     '.zsc-result{background:var(--green);border-color:var(--green);color:var(--white);display:flex;flex-direction:column}',
     '.zsc-rpad{padding:28px;display:flex;flex-direction:column;height:100%;transition:opacity .2s var(--ease)}',
     '.zsc-rpad.stale{opacity:.42}',
@@ -83,7 +121,14 @@
     '.zsc-note{margin-top:auto;padding-top:20px;color:#9fbdb7;font-size:12.5px;line-height:1.5}',
     '.zsc-note.reason{color:#eaf6f2;font-size:15px;line-height:1.55;border-top:1px solid rgba(255,255,255,.16);margin-top:24px;padding-top:20px}',
     '.zsc-err{color:var(--yellow);font-size:14px;line-height:1.5;margin:14px 0 0}',
-    '.zsc-disc{font-size:11.5px;color:var(--neutral);line-height:1.55;margin:16px 0 0;text-align:center}',
+    '.zsc-fine{margin-top:auto;padding-top:20px;color:#7fa6a0;font-size:11.5px;line-height:1.55;border-top:1px solid rgba(255,255,255,.12)}',
+    '.zsc-howto{margin-top:20px;padding:28px}',
+    '.zsc-howto h3{font-family:var(--head);font-weight:500;font-size:19px;letter-spacing:-.01em;line-height:1.25;margin:0 0 18px;color:var(--ink)}',
+    '.zsc-howto ol{margin:0;padding:0;list-style:none;counter-reset:zsc-step;display:grid;gap:14px}',
+    '.zsc-howto li{position:relative;padding-left:40px;font-size:14.5px;line-height:1.55;color:#3a3a3a;counter-increment:zsc-step}',
+    '.zsc-howto li::before{content:counter(zsc-step);position:absolute;left:0;top:1px;width:25px;height:25px;display:flex;align-items:center;justify-content:center;background:var(--green);color:var(--white);font-family:var(--head);font-size:13px;font-weight:500}',
+    '.zsc-howto li strong{font-weight:500;color:var(--ink)}',
+    '.zsc-howto .zsc-howto-foot{font-size:13px;color:var(--neutral);line-height:1.55;margin:18px 0 0;padding-top:16px;border-top:1px solid var(--dbeige)}',
     '@media(max-width:640px){.zsc-grid{grid-template-columns:1fr}}',
     '@media(prefers-reduced-motion:reduce){.zsc-seg,.zsc-rpad,.zsc-hint{transition:none}}'
   ].join('');
@@ -114,7 +159,11 @@
       api: node.getAttribute('data-api') || '/tools/sales-tax-calculator/api/quote'
     };
     var locText = (cfg.city ? cfg.city + ', ' + cfg.state : cfg.state) + (cfg.zip ? ' · ' + cfg.zip : '');
-    var options = CATEGORIES.map(function (c) { return '<option value="' + c.id + '">' + esc(c.label) + '</option>'; }).join('');
+    var options = CATEGORIES.map(function (grp) {
+      return '<optgroup label="' + esc(grp.g) + '">' +
+        grp.items.map(function (c) { return '<option value="' + c.id + '">' + esc(c.label) + '</option>'; }).join('') +
+        '</optgroup>';
+    }).join('');
 
     var root = el(
       '<div class="zsc"><div class="zsc-grid">' +
@@ -127,10 +176,22 @@
             '<select class="zsc-select" id="zsc-cat">' + options + '</select></div>' +
           '<button class="zsc-btn" id="zsc-go" type="button">Calculate tax</button>' +
           '<p class="zsc-hint" id="zsc-hint">Inputs changed — calculate to update.</p>' +
+          '<a class="zsc-pb" href="https://zamp.com" target="_blank" rel="noopener" aria-label="Powered by Zamp Sales Tax API">' +
+            '<span>Powered by</span><img src="' + ZAMP_LOGO + '" alt="Zamp" width="42" height="13"><span>Sales Tax API</span>' +
+          '</a>' +
         '</div></div>' +
         '<div class="zsc-panel zsc-result"><div class="zsc-rpad" id="zsc-rpad"></div></div>' +
       '</div>' +
-      '<p class="zsc-disc">Estimates for general information only — not tax advice. Rates can vary by exact address within a ZIP code. Sales tax data powered by Zamp.</p>' +
+      '<div class="zsc-panel zsc-howto">' +
+        '<h3>How to use the ' + esc(cfg.city ? cfg.city : 'sales tax') + ' calculator</h3>' +
+        '<ol>' +
+          '<li>Enter the price of your item in the <strong>Item price</strong> box.</li>' +
+          '<li>Choose the option under <strong>What are you buying?</strong> that best matches your product — sales tax rules differ for clothing, groceries, digital goods, medicine and more.</li>' +
+          '<li>Press <strong>Calculate tax</strong> to see the exact sales tax and order total' + (cfg.city ? ' for ' + esc(cfg.city) : '') + '.</li>' +
+          '<li>Review the breakdown to see how the rate splits across state, county, city and special-district taxes.</li>' +
+        '</ol>' +
+        '<p class="zsc-howto-foot">Every result runs live against Zamp’s tax engine, so it reflects the current rules for this location rather than a stored estimate.</p>' +
+      '</div>' +
       '</div>'
     );
 
@@ -187,7 +248,7 @@
           });
           html += '<div class="zsc-lrow tot"><span></span><span class="zsc-ln">Effective rate</span><span class="zsc-lv">' + pct(d.effectiveRate) + '</span></div></div></div>';
         }
-        html += '<p class="zsc-note">Calculated by Zamp for your exact amount — local caps and exemptions included.</p>';
+        html += FINE;
         pad.innerHTML = html;
 
         if (animate && js.length) {
@@ -202,7 +263,8 @@
           '<p class="zsc-tax">' + usd.format(0) + '</p>' +
           '<p class="zsc-sub">on ' + usd.format(amount) + ' &middot; total <strong>' + usd.format(amount) + '</strong></p>' +
           '<span class="zsc-chip exempt">Exempt' + (cfg.state ? ' in ' + esc(cfg.state) : '') + '</span>' +
-          (d.note ? '<p class="zsc-note reason">' + esc(d.note) + '</p>' : '');
+          (d.note ? '<p class="zsc-note reason">' + esc(d.note) + '</p>' : '') +
+          FINE;
       }
     }
 

@@ -15,6 +15,7 @@ export interface TaxCodeOption {
 }
 
 export const TAX_CODES: TaxCodeOption[] = [
+  // ---- general & retail / ecommerce ----
   { id: 'general', label: 'General goods', zampCode: 'R_TPP' },
   {
     id: 'clothing',
@@ -23,16 +24,103 @@ export const TAX_CODES: TaxCodeOption[] = [
     note: 'Some states exempt clothing entirely or only above a price threshold (e.g. MA exempts items up to $175, taxing only the amount over), so the tax can change with the price. Accessories and athletic gear follow separate rules.',
   },
   {
+    id: 'accessories',
+    label: 'Apparel accessories',
+    zampCode: 'R_TPP_APPAREL_ACCESSORIES',
+    note: 'Accessories like jewelry and handbags are usually taxed even in states that exempt clothing.',
+  },
+  { id: 'cosmetics', label: 'Cosmetics & personal care', zampCode: 'R_TPP_PERSONAL-CARE' },
+  {
+    id: 'feminine-hygiene',
+    label: 'Feminine hygiene products',
+    zampCode: 'R_TPP_PERSONAL-CARE_FEMININE-HYGIENE',
+    note: 'A growing number of states exempt menstrual products from sales tax.',
+  },
+  {
+    id: 'prescription',
+    label: 'Prescription drugs',
+    zampCode: 'R_TPP_DRUGS_PRESCRIPTION',
+    note: 'Prescription medication is exempt in almost every state.',
+  },
+  {
+    id: 'otc',
+    label: 'Over-the-counter medicine',
+    zampCode: 'R_TPP_DRUGS',
+    note: 'OTC medicine is taxed in some states and exempt in others.',
+  },
+  { id: 'pet-food', label: 'Pet food', zampCode: 'R_TPP_PET-SUPPLIES_PET-FOOD' },
+  // ---- digital products ----
+  {
+    id: 'digital',
+    label: 'Digital products',
+    zampCode: 'Z-DIG000',
+    note: 'Digital goods are taxed in some states and exempt in others.',
+  },
+  {
+    id: 'software',
+    label: 'Downloaded software',
+    zampCode: 'Z-DIG600',
+    note: 'Prewritten software downloaded electronically; taxability varies by state.',
+  },
+  {
+    id: 'saas',
+    label: 'Software (SaaS)',
+    zampCode: 'Z-DIG540',
+    note: 'The taxability of software-as-a-service varies widely by state.',
+  },
+  {
+    id: 'streaming',
+    label: 'Streaming subscription',
+    zampCode: 'Z-DIG515',
+    note: 'Streaming services are increasingly taxed, but not everywhere.',
+  },
+  { id: 'ebooks', label: 'eBooks', zampCode: 'Z-DIG110', note: 'Digital book taxability varies by state.' },
+  // ---- food & beverage ----
+  {
     id: 'groceries',
     label: 'Groceries (food for home)',
     zampCode: 'Z-FBV000',
-    note: 'Many states exempt grocery food or apply a reduced rate.',
+    note: 'Most states exempt grocery food or apply a reduced rate.',
   },
   { id: 'prepared-food', label: 'Prepared food / restaurant', zampCode: 'Z-FBV400' },
-  { id: 'candy', label: 'Candy', zampCode: 'Z-FBV200' },
-  { id: 'digital', label: 'Digital products', zampCode: 'Z-DIG000' },
-  { id: 'saas', label: 'Software (SaaS)', zampCode: 'Z-DIG540' },
-  { id: 'services', label: 'Professional services', zampCode: 'R_SRV_PROFESSIONAL' },
+  {
+    id: 'candy',
+    label: 'Candy',
+    zampCode: 'Z-FBV200',
+    note: 'Several states tax candy even when groceries are exempt.',
+  },
+  {
+    id: 'snacks',
+    label: 'Snack food',
+    zampCode: 'Z-FBV205',
+    note: 'Often treated as grocery food and exempt, but not always.',
+  },
+  {
+    id: 'soda',
+    label: 'Soft drinks / soda',
+    zampCode: 'Z-FBV100',
+    note: 'Soft drinks are commonly taxed even where groceries are exempt.',
+  },
+  {
+    id: 'water',
+    label: 'Bottled water',
+    zampCode: 'Z-FBV125',
+    note: 'Bottled water is exempt in most states but taxed in some.',
+  },
+  { id: 'juice', label: 'Juice', zampCode: 'Z-FBV135', note: 'High-juice-content drinks are often exempt as food.' },
+  {
+    id: 'supplements',
+    label: 'Vitamins & supplements',
+    zampCode: 'Z-FBV300',
+    note: 'Dietary supplements are taxed in some states and exempt in others.',
+  },
+  // ---- services ----
+  {
+    id: 'services',
+    label: 'Professional services',
+    zampCode: 'R_SRV_PROFESSIONAL',
+    note: "Most states don't tax professional services.",
+  },
 ];
 
 const byId = new Map(TAX_CODES.map((t) => [t.id, t]));
