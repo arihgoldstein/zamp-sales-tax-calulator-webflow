@@ -18,9 +18,9 @@ export const TAX_CODES: TaxCodeOption[] = [
   { id: 'general', label: 'General goods', zampCode: 'R_TPP' },
   {
     id: 'clothing',
-    label: 'Clothing & apparel',
-    zampCode: 'R_TPP_APPAREL',
-    note: 'Some states exempt clothing or apply it only above a price threshold, so larger orders may be taxed differently.',
+    label: 'Clothing',
+    zampCode: 'R_TPP_APPAREL_CLOTHING',
+    note: 'Some states exempt clothing entirely or only above a price threshold (e.g. MA exempts items up to $175, taxing only the amount over), so the tax can change with the price. Accessories and athletic gear follow separate rules.',
   },
   {
     id: 'groceries',

@@ -20,7 +20,7 @@
 
   var CATEGORIES = [
     { id: 'general', label: 'General goods' },
-    { id: 'clothing', label: 'Clothing & apparel' },
+    { id: 'clothing', label: 'Clothing' },
     { id: 'groceries', label: 'Groceries (food for home)' },
     { id: 'prepared-food', label: 'Prepared food / restaurant' },
     { id: 'candy', label: 'Candy' },
