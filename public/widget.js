@@ -58,7 +58,7 @@
   // standalone disclaimer + "calculated by Zamp" note).
   var FINE = '<p class="zsc-fine">For general information only — not tax advice. Each estimate is ' +
     'calculated by Zamp for the exact amount entered, with local caps and exemptions included; ' +
-    'the rate can still vary by precise address within a ZIP code. Sales tax data powered by Zamp.</p>';
+    'the rate can still vary by precise address within a ZIP code.</p>';
 
   // Black Zamp wordmark from the site CDN, used in the "Powered by" badge.
   var ZAMP_LOGO = 'https://cdn.prod.website-files.com/69f3731843be4ce24ae7dea2/69fa05516f03437e8e9e6511_Logo.svg';
@@ -92,10 +92,13 @@
     '.zsc-btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(24,62,61,.28)}',
     '.zsc-hint{font-size:12.5px;color:var(--orange);margin:12px 0 0;min-height:1em;opacity:0;transition:opacity .2s}',
     '.zsc-hint.show{opacity:1}',
-    '.zsc-pb{display:inline-flex;align-items:center;gap:7px;margin-top:20px;text-decoration:none;color:var(--neutral);font-size:11.5px;letter-spacing:.01em;transition:color .2s var(--ease)}',
-    '.zsc-pb:hover{color:var(--ink)}',
+    '.zsc-pb{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:22px;text-decoration:none;transition:opacity .2s var(--ease)}',
+    '.zsc-pb:hover{opacity:.68}',
     '.zsc-pb:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(24,62,61,.18)}',
-    '.zsc-pb img{height:13px;width:auto;display:block}',
+    '.zsc-pb-pre{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--neutral)}',
+    '.zsc-pb-main{display:inline-flex;align-items:center;gap:9px}',
+    '.zsc-pb-main img{height:17px;width:auto;display:block}',
+    '.zsc-pb-api{font-family:var(--head);font-size:17px;font-weight:500;letter-spacing:-.01em;color:var(--ink)}',
     '.zsc-result{background:var(--green);border-color:var(--green);color:var(--white);display:flex;flex-direction:column}',
     '.zsc-rpad{padding:28px;display:flex;flex-direction:column;height:100%;transition:opacity .2s var(--ease)}',
     '.zsc-rpad.stale{opacity:.42}',
@@ -159,6 +162,8 @@
       api: node.getAttribute('data-api') || '/tools/sales-tax-calculator/api/quote'
     };
     var locText = (cfg.city ? cfg.city + ', ' + cfg.state : cfg.state) + (cfg.zip ? ' · ' + cfg.zip : '');
+    var placeName = cfg.city ? (cfg.city + (cfg.state ? ', ' + cfg.state : '')) : cfg.state;
+    var howtoTitle = placeName ? 'How to use the ' + placeName + ' sales tax calculator' : 'How to use this sales tax calculator';
     var options = CATEGORIES.map(function (grp) {
       return '<optgroup label="' + esc(grp.g) + '">' +
         grp.items.map(function (c) { return '<option value="' + c.id + '">' + esc(c.label) + '</option>'; }).join('') +
@@ -177,17 +182,18 @@
           '<button class="zsc-btn" id="zsc-go" type="button">Calculate tax</button>' +
           '<p class="zsc-hint" id="zsc-hint">Inputs changed — calculate to update.</p>' +
           '<a class="zsc-pb" href="https://zamp.com" target="_blank" rel="noopener" aria-label="Powered by Zamp Sales Tax API">' +
-            '<span>Powered by</span><img src="' + ZAMP_LOGO + '" alt="Zamp" width="42" height="13"><span>Sales Tax API</span>' +
+            '<span class="zsc-pb-pre">Powered by</span>' +
+            '<span class="zsc-pb-main"><img src="' + ZAMP_LOGO + '" alt="Zamp" width="55" height="17"><span class="zsc-pb-api">Sales Tax API</span></span>' +
           '</a>' +
         '</div></div>' +
         '<div class="zsc-panel zsc-result"><div class="zsc-rpad" id="zsc-rpad"></div></div>' +
       '</div>' +
       '<div class="zsc-panel zsc-howto">' +
-        '<h3>How to use the ' + esc(cfg.city ? cfg.city : 'sales tax') + ' calculator</h3>' +
+        '<h3>' + esc(howtoTitle) + '</h3>' +
         '<ol>' +
           '<li>Enter the price of your item in the <strong>Item price</strong> box.</li>' +
           '<li>Choose the option under <strong>What are you buying?</strong> that best matches your product — sales tax rules differ for clothing, groceries, digital goods, medicine and more.</li>' +
-          '<li>Press <strong>Calculate tax</strong> to see the exact sales tax and order total' + (cfg.city ? ' for ' + esc(cfg.city) : '') + '.</li>' +
+          '<li>Press <strong>Calculate tax</strong> to see the exact sales tax and order total' + (placeName ? ' for ' + esc(placeName) : '') + '.</li>' +
           '<li>Review the breakdown to see how the rate splits across state, county, city and special-district taxes.</li>' +
         '</ol>' +
         '<p class="zsc-howto-foot">Every result runs live against Zamp’s tax engine, so it reflects the current rules for this location rather than a stored estimate.</p>' +
