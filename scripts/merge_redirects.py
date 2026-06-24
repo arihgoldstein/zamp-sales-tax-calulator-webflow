@@ -49,6 +49,8 @@ rows, seen = [], set()
 repointed = 0
 for r in csv.DictReader(open(existing_path, newline='')):
     src, tgt = r['source'], r['target']
+    if re.search(r'/page/[0-9]+', src):  # drop listing-page pagination redirects
+        continue
     seen.add(src)
     if is_guide(tgt):
         slug = source_to_slug(src)
