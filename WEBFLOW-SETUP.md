@@ -84,11 +84,13 @@ plain text.)
 ## 4. Import the CSVs
 
 1. **States first:** States collection → **Import** → `data/states.csv` → map Name → `name`,
-   Slug → `slug`, Abbreviation → `abbreviation`, etc. Publish so the items exist.
+   Slug → `slug`, Abbreviation → `abbreviation`, etc. **Then Publish the site** — not just
+   save. ⚠️ A reference can only link to a **published** item, so if you skip publishing here,
+   the Locations import below fails every row with "Validation Failure."
 2. **Then Locations:** Locations collection → **Import** → `data/locations.csv` (or
    `data/locations.test.csv` for a 3-row trial). Map Name → `name`, Slug → `slug`,
-   City → `city`, State code → `state`, ZIP → `zip`, and the **State reference → `state_name`**
-   (Webflow links each row to the matching States item by name).
+   City → `city`, State code → `state`, ZIP → `zip`, and the **State reference → `state_slug`**
+   (Webflow links each row to the matching States item by slug, e.g. `california`).
 3. **Before publishing, exclude `needs_review = true` rows** (≈14 in the pilot) until you've
    confirmed their rates on the production key — or re-run the pipeline with the production
    key first, which should clear them.
