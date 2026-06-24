@@ -98,7 +98,7 @@
     '.zsc-pb-pre{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--neutral)}',
     '.zsc-pb-main{display:inline-flex;align-items:center;gap:7px}',
     '.zsc-pb-main img{height:13px;width:auto;display:block}',
-    '.zsc-pb-api{font-family:var(--body);font-size:14px;font-weight:600;color:var(--ink)}',
+    '.zsc-pb-api{font-family:var(--body);font-size:14px;font-weight:400;color:var(--ink)}',
     '.zsc-result{background:var(--green);border-color:var(--green);color:var(--white);display:flex;flex-direction:column}',
     '.zsc-rpad{padding:28px;display:flex;flex-direction:column;height:100%;transition:opacity .2s var(--ease)}',
     '.zsc-rpad.stale{opacity:.42}',
